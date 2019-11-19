@@ -3,8 +3,9 @@
 #include <eosio/eosio.hpp>
 #include <eosio/print.hpp>
 #include <eosio/asset.hpp>
-#include <eosio/transaction.hpp>
-#include <eosio/crypto.hpp>
+#include <eosio/symbol.hpp>
+#include <eosio/system.hpp>
+#include <eosio/singleton.hpp>
 #include <string>
 #include "./dist/contracts/eos/dappservices/vaccounts.hpp"
 #include "./dist/contracts/eos/dappservices/ipfs.hpp"
@@ -19,20 +20,24 @@
 
 #define CONTRACT_NAME() decfinance
 
-CONTRACT_START()
-// CONTRACT moonlight : public eosio::contract
-// {
-//   using contract::contract;
+//CONTRACT_START()
+using namespace eosio;
 
-// public:
-//   DAPPSERVICES_ACTIONS()
+using std::string;
+
+CONTRACT decfinance : public eosio::contract
+{
+  using contract::contract;
+
+public:
+  DAPPSERVICES_ACTIONS()
 
 
 struct login_struct
 {
   name username;
   asset balance;
-  uint8_t lease_period;
+  uint32_t lease_period;
   EOSLIB_SERIALIZE(login_struct, (username)(balance)(lease_period))
 };
 
@@ -43,6 +48,10 @@ struct login_struct
 // };
 
 [[eosio::action]] void registeracc(login_struct payload);
+void transfer(name payer, name reciever, asset value, std::string memo);
+void acceptbid(name lender, uint64_t id);
+void movetorex(name lender);
+void sellrexbid(name lender, asset amount);
 
 
 TABLE orders
@@ -51,7 +60,8 @@ TABLE orders
   name username;
   asset rent_amount;
   asset rent_offer;
-  uint8_t lease_period;
+  uint32_t lease_period;
+  bool is_leased;
 
 
   uint64_t primary_key() const { return id; }
@@ -65,28 +75,39 @@ TABLE orders_filled
   name borrower;
   name lender;
   asset rent_amount;
-  asset rent_offer;
-  uint8_t lease_period;
+  asset rent_payable;
+  time_point_sec expires_at;
   time_point_sec filled_at;
 
 
   uint64_t primary_key() const { return id; }
 };
-typedef dapp::multi_index<"ordersfilled"_n, orders_filled> orders_filled_tab;
-typedef eosio::multi_index<".ordersfilled"_n, orders_filled>orders_filled_v_abi;
+typedef dapp::multi_index<"ordersfill"_n, orders_filled> orders_filled_tab;
+typedef eosio::multi_index<".ordersfill"_n, orders_filled>orders_filled_v_abi;
 
-TABLE vramtest
+TABLE lender
 {
   name username;
   asset balance;
   asset rex_balance;
-  uint8_t lease_period;
+  uint32_t lease_period;
 
   uint64_t primary_key() const { return username.value; }
 };
 
-typedef dapp::multi_index<"vramtest3"_n, vramtest> vramtest_tab;
-typedef eosio::multi_index<".vramtest3"_n, vramtest> vramtest_v_abi;
+typedef dapp::multi_index<"lenderinfo"_n, lender> lender_tab;
+typedef eosio::multi_index<".lenderinfo"_n, lender> lender_tab_v_abi;
+
+TABLE borrowerdepo
+{
+  name username;
+  asset balance;
+
+  uint64_t primary_key() const { return username.value; }
+};
+
+typedef dapp::multi_index<"borrowerblc"_n, borrowerdepo> borrowerdepo_tab;
+typedef eosio::multi_index<".borrowerblc"_n, borrowerdepo> borrowerdepo_v_abi;
 
 TABLE shardbucket
 {
@@ -95,9 +116,10 @@ TABLE shardbucket
   uint64_t primary_key() const { return shard; }
 };
 
-typedef eosio::multi_index<"vramtest3"_n, shardbucket> vramtestdata_tab_abi;
+typedef eosio::multi_index<"lenderinfo"_n, shardbucket> lender_tab_abi;
 typedef eosio::multi_index<"orders"_n, shardbucket> orders_tab_abi;
-typedef eosio::multi_index<"ordersfilled"_n, shardbucket> orders_filled_tab_abi;
+typedef eosio::multi_index<"ordersfill"_n, shardbucket> orders_filled_tab_abi;
+typedef eosio::multi_index<"borrowerblc"_n, shardbucket> borrowerdepo_tab_abi;
 
 vector<string>
   split(const string &str, const string &delim)
@@ -117,6 +139,15 @@ vector<string>
     } while (pos < str.length() && prev < str.length());
     return tokens;
   }
+ TABLE rexeosrate
+  {
+
+    asset eosperrex;
+    uint64_t primary_key() const { return eosperrex.symbol.code().raw(); }
+  };
+
+  typedef eosio::singleton<"rexeosrate"_n, rexeosrate> rexeosrate_tab;
 
 VACCOUNTS_APPLY(((login_struct)(registeracc)))
-CONTRACT_END((registeracc)(regaccount)(xdcommit)(xvinit))
+};
+//CONTRACT_END((registeracc)(regaccount)(xdcommit)(xvinit))
