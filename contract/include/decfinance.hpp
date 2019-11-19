@@ -17,7 +17,7 @@
 #define DAPPSERVICE_ACTIONS_COMMANDS() \
   IPFS_SVC_COMMANDS()VACCOUNTS_SVC_COMMANDS() 
 
-#define CONTRACT_NAME() moonlight
+#define CONTRACT_NAME() decfinance
 
 CONTRACT_START()
 // CONTRACT moonlight : public eosio::contract
@@ -79,6 +79,7 @@ TABLE vramtest
 {
   name username;
   asset balance;
+  asset rex_balance;
   uint8_t lease_period;
 
   uint64_t primary_key() const { return username.value; }

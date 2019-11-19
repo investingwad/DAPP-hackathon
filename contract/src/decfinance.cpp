@@ -1,7 +1,7 @@
 
-#include "moonlight.hpp"
+#include "decfinance.hpp"
 
-void moonlight::registeracc(login_struct payload)
+void decfinance::registeracc(login_struct payload)
 {
   require_vaccount(payload.username);
   vramtest_tab vramtest(_self, _self.value);
@@ -15,7 +15,7 @@ void moonlight::registeracc(login_struct payload)
   });
 }
 
-void moonlight::transfer(name payer, name reciever, asset value, std::string memo)
+void decfinance::transfer(name payer, name reciever, asset value, std::string memo)
 {
   auto flag = 0;
   vector<string> memo_split = split(memo, ":");
@@ -50,7 +50,7 @@ void moonlight::transfer(name payer, name reciever, asset value, std::string mem
   }
 }
 
-void moonlight::acceptbid(name lender, uint64_t id)
+void decfinance::acceptbid(name lender, uint64_t id)
 {
 
   orders_filled_tab orderfill(_self, _self.value);
@@ -76,13 +76,21 @@ void moonlight::acceptbid(name lender, uint64_t id)
   order.erase(itr);
 }
 
-void moonlight::buyrex(name lender)
+void decfinance::buyrex(name lender)
 {
   vramtest_tab vramtest(_self, _self.value);
-  auto itr = vramtest.find(user_vaccount);
+  auto itr = vramtest.find(lender.value);
+  if(itr!=vramtest.end())
+  {
+     vramtest.modify(itr, get_self(), [&](auto &e) {
+          e.balance -= itr->balance;
+          e.rex_balance = true;
+        });
+    
+  }
   action(
        permission_level{get_self(), "active"_n},
        "eosio"_n, "buyrex"_n,
-       std::make_tuple(get_self(), itr->username, cpu_net_stake, cpu_net_stake, false)
+       std::make_tuple(get_self(), )
        .send();
 }
