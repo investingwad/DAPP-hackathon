@@ -30,67 +30,72 @@ CONTRACT decfinance : public eosio::contract
   using contract::contract;
 
 public:
+
   DAPPSERVICES_ACTIONS()
 
+
+void transfer(name payer, name reciever, asset value, std::string memo);
+void createorder(name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type);
+void proxytransfer(name vaccount_user, asset amount);
+void matchorder(name vaccount_user, asset amount);
+void staketoorder(name proxy, name stake_to, asset amount, std::string resource_type);
+void checkorder(name vaccount);
+void withdraw(name vaccount);
+void leaseunstake(uint64_t orderid);
 
 struct login_struct
 {
   name username;
   asset balance;
   uint32_t lease_period;
-  EOSLIB_SERIALIZE(login_struct, (username)(balance)(lease_period))
+  name vote_choice;
+  
+  EOSLIB_SERIALIZE(login_struct, (username)(balance)(lease_period)(vote_choice))
 };
 
-// struct vaccount_register
-// {
-//   name vaccount;
-//   EOSLIB_SERIALIZE(vaccount_register, (vaccount))
-// };
-
 [[eosio::action]] void registeracc(login_struct payload);
-void transfer(name payer, name reciever, asset value, std::string memo);
-void acceptbid(name lender, uint64_t id);
-void movetorex(name lender);
-void sellrexbid(name lender, asset amount);
-
 
 TABLE orders
 {
   uint64_t id;
-  name username;
+  name authorizer;
+  name stake_to;
   asset rent_amount;
   asset rent_offer;
   uint32_t lease_period;
-  bool is_leased;
-
+  std::string resource_type;
+  std::string order_stat;
 
   uint64_t primary_key() const { return id; }
 };
 typedef dapp::multi_index<"orders"_n, orders> orders_tab;
 typedef eosio::multi_index<".orders"_n, orders> orders_v_abi;
 
-TABLE orders_filled
+TABLE lease_status
 {
   uint64_t id;
-  name borrower;
+  uint64_t order_id;
   name lender;
+  name authorizer;
+  name stake_to;
   asset rent_amount;
-  asset rent_payable;
+  asset rent_fee;
   time_point_sec expires_at;
   time_point_sec filled_at;
 
-
   uint64_t primary_key() const { return id; }
 };
-typedef dapp::multi_index<"ordersfill"_n, orders_filled> orders_filled_tab;
-typedef eosio::multi_index<".ordersfill"_n, orders_filled>orders_filled_v_abi;
+typedef dapp::multi_index<"leasestat"_n, lease_status> lease_status_tab;
+typedef eosio::multi_index<".leasestat"_n, lease_status> lease_status_v_abi;
 
 TABLE lender
 {
   name username;
   asset balance;
-  asset rex_balance;
-  uint32_t lease_period;
+  uint32_t max_lease_period;
+  name vote_choice;
+  time_point_sec last_lease_out;
+  asset total_leaseout_amount;
 
   uint64_t primary_key() const { return username.value; }
 };
@@ -118,7 +123,7 @@ TABLE shardbucket
 
 typedef eosio::multi_index<"lenderinfo"_n, shardbucket> lender_tab_abi;
 typedef eosio::multi_index<"orders"_n, shardbucket> orders_tab_abi;
-typedef eosio::multi_index<"ordersfill"_n, shardbucket> orders_filled_tab_abi;
+typedef eosio::multi_index<"leasestat"_n, shardbucket> lease_status_tab_abi;
 typedef eosio::multi_index<"borrowerblc"_n, shardbucket> borrowerdepo_tab_abi;
 
 vector<string>

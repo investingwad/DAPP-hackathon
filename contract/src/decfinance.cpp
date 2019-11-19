@@ -4,121 +4,324 @@
 void decfinance::registeracc(login_struct payload)
 {
   require_vaccount(payload.username);
-  lender_tab vramtest(_self, _self.value);
-  auto itr = vramtest.find(payload.username.value);
-  check(itr == vramtest.end(), "Account already registered");
+  lender_tab lender(_self, _self.value);
+  auto itr = lender.find(payload.username.value);
+  check(itr == lender.end(), "Account already registered");
 
-  vramtest.emplace(_self, [&](auto &e) {
+  lender.emplace(_self, [&](auto &e) {
     e.username = payload.username;
     e.balance = payload.balance;
-    e.lease_period = payload.lease_period;
+    e.max_lease_period = payload.lease_period;
+    e.vote_choice = payload.vote_choice;
+    e.total_leaseout_amount.symbol = payload.balance.symbol;
   });
 }
 
 void decfinance::transfer(name payer, name reciever, asset value, std::string memo)
 {
-  auto flag = 0;
-  vector<string> memo_split = split(memo, ":");
-  name user_vaccount = name(memo_split[1].c_str());
-  lender_tab vramtest(_self, _self.value);
-  auto itr = vramtest.find(user_vaccount.value);
-  if (itr != vramtest.end())
+  if (reciever == _self)
   {
-    //check for orders
-
-    orders_tab order(_self, _self.value);
-    auto order_itr = order.rbegin();
-    // white(order_itr != order.end())
-    // {
-    //   if (order_itr->lease_period <= itr->lease_period && order_itr->rent_amount <= value)
-    //   {
-    //     // fill the order :- make entry in order_fill table
-    //     acceptbid(itr->username, order_itr->id);
-    //     // deduct user balance from initial deposit
-    //     vramtest.modify(itr, get_self(), [&](auto &e) {
-    //       e.balance -= order_itr->rent_amount;
-    //       e.is_leased = true;
-    //     });
-    //     flag = 1;
-    //     break;
-    //   }
-    //   itr++;
-    // }
-
-    // moving to rex if no order left
-    movetorex(user_vaccount);
+    vector<string> memo_split = split(memo, ":");
+    if (memo_split[0] == "0") // demand side fee transfer
+    {
+      vector<string> order_detail = split(memo_split[1], ",");
+      auto lease = std::stoi(order_detail[0]);
+      asset lease_eos = asset(lease, symbol(symbol_code("EOS"), 4));
+      name stake_to = name(order_detail[1].c_str());
+      auto duration = std::stoi(order_detail[2]);
+      std::string resource_type = order_detail[3];
+      createorder(payer, stake_to, lease_eos, value, duration, resource_type);
+    }
+    else if (memo_split[0] == "1") //supply side central exchange transfer
+    {
+      name vaccount_user = name(memo_split[1].c_str());
+      proxytransfer(vaccount_user, value);
+      matchorder(vaccount_user, value);
+    }
+    //   name user_vaccount = name(memo_split[1].c_str());
   }
 }
 
-void decfinance::acceptbid(name lender, uint64_t id)
+void decfinance::createorder(name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type)
 {
-
-  orders_filled_tab orderfill(_self, _self.value);
   orders_tab order(_self, _self.value);
-  auto itr = order.find(id);
-  asset cpu_net_stake = itr->rent_amount / 2;
-  // delegating cpu / net
-   action(
-       permission_level{get_self(), "active"_n},
-       "eosio"_n, "delegatebw"_n,
-       std::make_tuple(get_self(), itr->username, cpu_net_stake, cpu_net_stake, false))
-       .send();
-  
-  orderfill.emplace(_self, [&](auto &e) {
-    e.id = id;
-    e.borrower = itr->username;
-    e.lender = lender;
-    e.rent_amount = itr->rent_amount;
-    e.rent_payable = itr->rent_amount + itr->rent_offer;
-    e.expires_at = time_point_sec(current_time_point()) + (uint32_t)(itr->lease_period * 24 * 60 * 60);
-    e.filled_at = time_point_sec(current_time_point());
+  order.emplace(_self, [&](auto &e) {
+    e.id = order.available_primary_key();
+    e.authorizer = authorizer;
+    e.stake_to = stake_to;
+    e.rent_amount = rent_amount;
+    e.rent_offer = rent_offer;
+    e.lease_period = duration;
+    e.resource_type = resource_type;
+    e.order_stat = "queue";
   });
-  order.erase(itr);
 }
 
-void decfinance::movetorex(name lender)
+void decfinance::proxytransfer(name vaccount_user, asset amount)
 {
-  lender_tab vramtest(_self, _self.value);
-  rexeosrate_tab rexeos(get_self(), get_self().value);
-  auto itr = vramtest.find(lender.value);
-  if (itr != vramtest.end())
-  {
-    action(
-       permission_level{get_self(), "active"_n},
-       "eosio"_n, "buyrex"_n,
-       std::make_tuple(get_self(), itr->balance ))
-       .send();
 
-    asset equivalent_rexamt = asset(0, symbol(symbol_code("REX"), 4));
-    equivalent_rexamt.amount = itr->balance.amount / rexeos.get().eosperrex.amount;
-     vramtest.modify(itr, get_self(), [&](auto &e) {
-      e.balance -= itr->balance;
-      e.rex_balance = equivalent_rexamt;
-        });
+  lender_tab lender(_self, _self.value);
+  auto itr = lender.find(vaccount_user.value);
+
+  if (itr != lender.end())
+  {
+    name proxy = itr->vote_choice;
+    action(
+        permission_level{get_self(), "active"_n},
+        "eosio.token"_n, "transfer"_n,
+        std::make_tuple(get_self(), proxy, amount, std::string("transfer to proxy ")))
+        .send();
   }
 }
 
-void decfinance::sellrexbid(name lender, asset amount)
+void decfinance::matchorder(name vaccount_user, asset amount)
 {
-  lender_tab vramtest(_self, _self.value);
-  rexeosrate_tab rexeos(get_self(), get_self().value);
-  auto itr = vramtest.find(lender.value);
-  if (itr != vramtest.end())
-  {
-    action(
-       permission_level{get_self(), "active"_n},
-       "eosio"_n, "sellrex"_n,
-       std::make_tuple(get_self(), itr->balance ))
-       .send();
 
-    asset equivalent_rexamt = asset(0, symbol(symbol_code("REX"), 4));
-    equivalent_rexamt.amount = itr->balance.amount / rexeos.get().eosperrex.amount;
-  
-     vramtest.modify(itr, get_self(), [&](auto &e) {
-      e.balance -= itr->balance;
-      e.rex_balance = equivalent_rexamt;
-        });
+  lender_tab lender(_self, _self.value);
+  orders_tab order(_self, _self.value);
+  auto itr = lender.find(vaccount_user.value);
+
+  if (itr != lender.end())
+  {
+    uint64_t orderid;
+    int apr_cal = 0;
+    auto order_itr = order.crbegin();
+    while (order_itr != order.end())
+    {
+      if (order_itr->order_stat == "queue" && order_itr->lease_period <= itr->max_lease_period && order_itr->rent_amount <= itr->balance)
+      {
+        if (apr_cal <= (order_itr->rent_offer.amount / order_itr->lease_period))
+        {
+          orderid = order_itr->id;
+          apr_cal = order_itr->rent_offer.amount / order_itr->lease_period;
+        }
+      }
+      order_itr++;
+    }
+    auto itr_orderstat = order.find(orderid);
+
+    staketoorder(itr->vote_choice, itr_orderstat->stake_to, itr_orderstat->rent_amount, itr_orderstat->resource_type);
+
+    lease_status_tab orderfill(_self, _self.value);
+    orderfill.emplace(_self, [&](auto &e) {
+      e.id = orderfill.available_primary_key();
+      e.order_id = orderid;
+      e.lender = vaccount_user;
+      e.authorizer = itr_orderstat->authorizer;
+      e.stake_to = itr_orderstat->stake_to;
+      e.rent_amount = itr_orderstat->rent_amount;
+      e.rent_fee = itr_orderstat->rent_offer;
+      e.expires_at = time_point_sec(current_time_point()) + (uint32_t)(itr_orderstat->lease_period * 24 * 60 * 60);
+      e.filled_at = time_point_sec(current_time_point());
+    });
+
+    order.modify(itr_orderstat, get_self(), [&](auto &e) {
+      e.order_stat = "active";
+    });
+
+    lender.modify(itr, get_self(), [&](auto &e) {
+      e.balance -= itr_orderstat->rent_amount;
+      e.last_lease_out = current_time_point();
+      e.total_leaseout_amount += itr_orderstat->rent_amount;
+    });
   }
 }
 
-EOSIO_DISPATCH_SVC_TRX(decfinance,(registeracc))
+void decfinance::staketoorder(name proxy, name stake_to, asset amount, std::string resource_type)
+{
+  asset cpu_stake;
+  asset net_stake;
+  if (resource_type == "cpu")
+  {
+    cpu_stake = amount;
+    net_stake.symbol = amount.symbol;
+  }
+  else if (resource_type == "net")
+  {
+    net_stake = amount;
+    cpu_stake.symbol = amount.symbol;
+  }
+  else
+  {
+    net_stake = amount / 2;
+    cpu_stake = net_stake;
+  }
+  action(
+      permission_level{proxy, "active"_n},
+      "eosio"_n, "delegatebw"_n,
+      std::make_tuple(proxy, stake_to, net_stake, cpu_stake, false))
+      .send();
+}
+
+void decfinance::checkorder(name vaccount)
+{
+
+  lender_tab lender(_self, _self.value);
+  auto itr = lender.find(vaccount.value);
+  require_auth(itr->vote_choice);
+  matchorder(vaccount, itr->balance);
+}
+
+void decfinance::withdraw(name vaccount)
+{
+
+  lender_tab lender(_self, _self.value);
+  auto itr = lender.find(vaccount.value);
+  require_auth(itr->vote_choice);
+  check(itr->total_leaseout_amount.amount == 0, "can not withdraw. amount leased out");
+  lender.erase(itr);
+  action(
+      permission_level{itr->vote_choice, "active"_n},
+      "eosio.token"_n, "transfer"_n,
+      std::make_tuple(itr->vote_choice, "exchange"_n, std::string("transfer to exchange ")))
+      .send();
+}
+
+void decfinance::leaseunstake(uint64_t orderid)
+{
+  orders_tab orders(_self, _self.value);
+  lease_status_tab orderfill(_self, _self.value);
+  auto order_itr = orderfill.find(orderid);
+  auto order = orders.find(order_itr->order_id);
+  lender_tab lender(_self, _self.value);
+  auto itr = lender.find(order_itr->lender.value);
+  require_auth(itr->vote_choice);
+  asset cpu_stake;
+  asset net_stake;
+  if (order->resource_type == "cpu")
+  {
+    cpu_stake = order_itr->rent_amount;
+    net_stake.symbol = order_itr->rent_amount.symbol;
+  }
+  else if (order->resource_type == "net")
+  {
+    net_stake = order_itr->rent_amount;
+    cpu_stake.symbol = order_itr->rent_amount.symbol;
+  }
+  else
+  {
+    net_stake = order_itr->rent_amount / 2;
+    cpu_stake = net_stake;
+  }
+  action(
+      permission_level{itr->vote_choice, "active"_n},
+      "eosio"_n, "undelegatebw"_n,
+      std::make_tuple(itr->vote_choice, order_itr->stake_to, net_stake, cpu_stake, false))
+      .send();
+  action(
+      permission_level{_self, "active"_n},
+      "eosio.token"_n, "transfer"_n,
+      std::make_tuple(_self, itr->vote_choice,order_itr->rent_fee, std::string("transfer fee to proxy on lease expiry ")))
+      .send();
+
+  orderfill.erase(order_itr);
+  orders.erase(order);
+
+  lender.modify(itr, get_self(), [&](auto &e) {
+    e.balance += order_itr->rent_amount + order_itr-> rent_fee;
+    e.total_leaseout_amount -= order_itr->rent_amount;
+  });
+}
+// void decfinance::acceptbid(name lender, uint64_t id)
+// {
+
+//   orders_filled_tab orderfill(_self, _self.value);
+//   orders_tab order(_self, _self.value);
+//   auto itr = order.find(id);
+//   asset cpu_net_stake = itr->rent_amount / 2;
+//   // delegating cpu / net
+//   action(
+//       permission_level{get_self(), "active"_n},
+//       "eosio"_n, "delegatebw"_n,
+//       std::make_tuple(get_self(), itr->username, cpu_net_stake, cpu_net_stake, false))
+//       .send();
+
+//   orderfill.emplace(_self, [&](auto &e) {
+//     e.id = id;
+//     e.borrower = itr->username;
+//     e.lender = lender;
+//     e.rent_amount = itr->rent_amount;
+//     e.rent_payable = itr->rent_amount + itr->rent_offer;
+//     e.expires_at = time_point_sec(current_time_point()) + (uint32_t)(itr->lease_period * 24 * 60 * 60);
+//     e.filled_at = time_point_sec(current_time_point());
+//   });
+//   order.erase(itr);
+// }
+
+// void decfinance::movetorex(name lender)
+// {
+//   lender_tab vramtest(_self, _self.value);
+//   rexeosrate_tab rexeos(get_self(), get_self().value);
+//   auto itr = vramtest.find(lender.value);
+//   if (itr != vramtest.end())
+//   {
+//     action(
+//         permission_level{get_self(), "active"_n},
+//         "eosio"_n, "buyrex"_n,
+//         std::make_tuple(get_self(), itr->balance))
+//         .send();
+
+//     asset equivalent_rexamt = asset(0, symbol(symbol_code("REX"), 4));
+//     equivalent_rexamt.amount = itr->balance.amount / rexeos.get().eosperrex.amount;
+//     vramtest.modify(itr, get_self(), [&](auto &e) {
+//       e.balance -= itr->balance;
+//       e.rex_balance = equivalent_rexamt;
+//     });
+//   }
+// }
+
+// void decfinance::sellrexbid(name lender, asset amount)
+// {
+//   lender_tab vramtest(_self, _self.value);
+//   rexeosrate_tab rexeos(get_self(), get_self().value);
+//   auto itr = vramtest.find(lender.value);
+//   if (itr != vramtest.end())
+//   {
+//     action(
+//         permission_level{get_self(), "active"_n},
+//         "eosio"_n, "sellrex"_n,
+//         std::make_tuple(get_self(), itr->balance))
+//         .send();
+
+//     asset equivalent_rexamt = asset(0, symbol(symbol_code("REX"), 4));
+//     equivalent_rexamt.amount = itr->balance.amount / rexeos.get().eosperrex.amount;
+
+//     vramtest.modify(itr, get_self(), [&](auto &e) {
+//       e.balance -= itr->balance;
+//       e.rex_balance = equivalent_rexamt;
+//     });
+//   }
+// }
+
+EOSIO_DISPATCH_SVC_TRX(decfinance, (registeracc))
+
+// auto flag = 0;
+//   vector<string> memo_split = split(memo, ":");
+//   name user_vaccount = name(memo_split[1].c_str());
+//   lender_tab vramtest(_self, _self.value);
+//   auto itr = vramtest.find(user_vaccount.value);
+//   if (itr != vramtest.end())
+//   {
+//     //check for orders
+
+//     orders_tab order(_self, _self.value);
+//     auto order_itr = order.rbegin();
+//     // white(order_itr != order.end())
+//     // {
+//     //   if (order_itr->lease_period <= itr->lease_period && order_itr->rent_amount <= value)
+//     //   {
+//     //     // fill the order :- make entry in order_fill table
+//     //     acceptbid(itr->username, order_itr->id);
+//     //     // deduct user balance from initial deposit
+//     //     vramtest.modify(itr, get_self(), [&](auto &e) {
+//     //       e.balance -= order_itr->rent_amount;
+//     //       e.is_leased = true;
+//     //     });
+//     //     flag = 1;
+//     //     break;
+//     //   }
+//     //   itr++;
+//     // }
+
+//     // moving to rex if no order left
+//     movetorex(user_vaccount);
