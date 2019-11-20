@@ -148,7 +148,7 @@ async function matchorder(amount, lease_period) {
     res = JSON.parse(res);
     if(res.row && res.row.order_stat == "queue" && res.row.lease_period <= lease_period && res.row.rent_amount <= amount)
     {
-
+      max_apr = parseFloat(res.row.rent_amount)
     }
   });
 
