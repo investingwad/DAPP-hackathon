@@ -11,7 +11,7 @@
   "dependencies": {
     "@liquidapps/dapp-client": "^2.0.3050",
     "@scatterjs/eosjs": "^1.5.14",
-    "axios": "^0.18.0",
+    "axios": "^0.19.0",
     "bignumber.js": "^9.0.0",
     "body-parser": "^1.18.3",
     "circular-json": "^0.5.9",
