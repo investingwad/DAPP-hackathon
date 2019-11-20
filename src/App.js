@@ -2,12 +2,12 @@ import React, { Component } from "react";
 import ScatterJS from "scatterjs-core";
 import ScatterEOS from "scatterjs-plugin-eosjs2";
 import { JsonRpc, Api, RpcError } from "eosjs";
-import { network, requiredFields, eosOptions } from "./helpers/Config";
+import { network, kylinN, requiredFields, eosOptions } from "./helpers/Config";
 import Dropdown from "react-bootstrap/Dropdown";
 import DropdownButton from "react-bootstrap/DropdownButton";
+import OrderTable from './helpers/TableApi'
 
-const endpoint = "https://eos.greymass.com"; //Mainnet
-let eos;
+const endpoint = "api.kylin.alohaeos.com"; 
 
 ScatterJS.plugins(new ScatterEOS());
 
@@ -27,7 +27,7 @@ class App extends Component {
         Duration: 0,
         Offer: ""
       },
-      loggedIn: false,
+      loggedIn: true,
       contractAccount: "hehe",
       connected: false,
       resource_needed: ""
@@ -39,12 +39,22 @@ class App extends Component {
       .connect("hack")
       .then(connected => {
         // User does not have Scatter Desktop, Mobile or Classic installed.
-        if (!connected) return console.log("Issue Connecting");
+        if (!connected)
+          return (
+            <DropdownButton id="dropdown-item-button" title="Actions">
+              <Dropdown.Item as="button" value="CPU" onClick={this.handleDrop}>
+                CPU
+              </Dropdown.Item>
+              <Dropdown.Item as="button" onClick={this.handleDrop}>
+                NET
+              </Dropdown.Item>
+            </DropdownButton>
+          );
 
         const scatter = ScatterJS.scatter;
 
         const requiredFields = {
-          accounts: [network]
+          accounts: [kylinN]
         };
 
         scatter.getIdentity(requiredFields).then(() => {
@@ -61,7 +71,7 @@ class App extends Component {
 
           // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
           const rpc = new JsonRpc(endpoint);
-          this.eos = ScatterJS.eos(network, Api, { rpc, beta3: true });
+          this.eos = ScatterJS.eos(kylinN, Api, { rpc, beta3: true });
         });
 
         window.ScatterJS = null;
@@ -146,7 +156,7 @@ class App extends Component {
     }
   };
   componentDidMount() {
-    this.connect();
+    // this.connect();
   }
 
   logout = async () => {
@@ -207,6 +217,9 @@ class App extends Component {
         </form>
         <div>
           <button onClick={this.logout}>Logout</button>
+        </div>
+        <div>
+          <OrderTable />
         </div>
       </div>
     ) : (

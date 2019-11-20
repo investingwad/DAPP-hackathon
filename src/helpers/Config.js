@@ -8,7 +8,7 @@ export const network = ScatterJS.Network.fromJson({
   protocol: "https"
 });
 
-export const kylin = ScatterJS.Network.fromJson({
+export const kylinN = ScatterJS.Network.fromJson({
   blockchain: "eos",
   chainId: "5fff1dae8dc8e2fc4d5b23b2c7665c97f9e9d8edf2b6485a86ba311c25639191",
   host: "api.kylin.alohaeos.com",
