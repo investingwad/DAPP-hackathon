@@ -1,83 +1,164 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const cors = require('cors')
-const { Api, JsonRpc, RpcError } = require('eosjs');
-const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig');      
-const fetch = require('isomorphic-fetch')                                                 
-const { TextEncoder, TextDecoder } = require('text-encoding'); 
+const dotenv = require("dotenv");
+dotenv.config();
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const { Api, JsonRpc, RpcError } = require("eosjs");
+const { JsSignatureProvider } = require("eosjs/dist/eosjs-jssig");
+const fetch = require("isomorphic-fetch");
+const { TextEncoder, TextDecoder } = require("text-encoding");
 
-const defaultPrivateKey = "5K29xwEieRaz4dDGEFanMjByCN6gXGEW3aRGrjUVcg42X9APoSf";
-const signatureProvider = new JsSignatureProvider([]);
+const defaultPrivateKey = "5KZ9RVFNytYUW1oHSVjgFoMvErvmZckgoXzwhHg6svWYDEzWsMB";
+const signatureProvider = new JsSignatureProvider([defaultPrivateKey]);
 let dspEndpt = "https://kylin-dsp-2.liquidapps.io";
-//let dspEndpt = "https://kylin-dsp-1.liquidapps.io";
+let datafetch =  '{"contract":"' +
+process.env.contract +
+'","scope":"' +
+process.env.contract +
+'","table":"' +
+process.env.order_table +
+'","key":'
 let rpc = new JsonRpc(dspEndpt, { fetch });
-  let api = new Api({
-    rpc,
-    signatureProvider,
-    textDecoder: new TextDecoder(),
-    textEncoder: new TextEncoder()
-  });
+let api = new Api({
+  rpc,
+  signatureProvider,
+  textDecoder: new TextDecoder(),
+  textEncoder: new TextEncoder()
+});
 
 const { createClient } = require("@liquidapps/dapp-client");
-var client
-const getClient = async() => {
-  if (client)
-    return client;
-     client = await createClient({ network: "kylin", httpEndpoint: dspEndpt, fetch: fetch });
+var client;
+const getClient = async () => {
+  if (client) return client;
+  client = await createClient({
+    network: "kylin",
+    httpEndpoint: dspEndpt,
+    fetch: fetch
+  });
   return client;
 };
-////////////////////////////////////////////////
-let app = express()
-// app.server = http.createServer(app)
 
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({
+let app = express();
+app.use(bodyParser.json());
+app.use(
+  bodyParser.urlencoded({
     extended: true
-}))
-app.use(cors());
-console.log("WELCOME!!")
-
-app.get('/', (req, res) => {
-    res.status(200).send("Moonlight APi")
-})
-
-app.post("/test", async (req, res) => {
-  try {
-    const service = await (await getClient()).service('vaccounts', 'dsptestac111');
-  //   const response = await service.push_liquid_account_transaction(
-  //     "dsptestac111",
-  //     "5K29xwEieRaz4dDGEFanMjByCN6gXGEW3aRGrjUVcg42X9APoSf",
-  //     "regaccount",
-  //     {
-  //         vaccount: 'testing126' // increment to new account if fails
-  //     }
-  // );
-
-  const response = await service.push_liquid_account_transaction(
-    "dsptestac111",
-    "5K29xwEieRaz4dDGEFanMjByCN6gXGEW3aRGrjUVcg42X9APoSf",
-    "registeracc",
-    {
-      username: 'testing124',
-      balance: "10.0000 EOS",
-    }
+  })
 );
-  console.log("response",response)
+app.use(cors());
+console.log("WELCOME!!");
+
+app.get("/", async (req, res) => {
+  res.status(200).send("Moonlight APi");
+});
+
+app.post("/register_user", async (req, res) => {
+  try {
+    const service = await (await getClient()).service(
+      "vaccounts",
+      process.env.contract
+    );
+    const response_reg = await service.push_liquid_account_transaction(
+      process.env.contract,
+      process.env.contract_key,
+      "regaccount",
+      {
+        vaccount: process.env.user1 // increment to new account if fails
+      }
+    );
+    console.log("response_reg", response_reg);
+
+    const response_registeraction = await service.push_liquid_account_transaction(
+      process.env.contract,
+      process.env.contract_key,
+      "registeracc",
+      {
+        username: process.env.user1,
+        balance: req.body.lease_amount,
+        lease_period: req.body.lease_period,
+        vote_choice: req.body.vote_choice
+      }
+    );
+    console.log("response_registeraction", response_registeraction);
+    lease_transfer(req.body.lease_amount);
   } catch (err) {
     console.log("error-->", err);
     res.status(400).send(err);
   }
 });
 
+async function lease_transfer(amount, lease_period) {
+  try {
+    const signatureProvider = new JsSignatureProvider([
+      process.env.exchange_key
+    ]);
+
+    let rpc = new JsonRpc(dspEndpt, { fetch });
+    let api = new Api({
+      rpc,
+      signatureProvider,
+      textDecoder: new TextDecoder(),
+      textEncoder: new TextEncoder()
+    });
+
+    const result = await api.transact(
+      {
+        actions: [
+          {
+            account: "eosio.token",
+            name: "transfer",
+            authorization: [
+              {
+                actor: process.env.exchange,
+                permission: "active"
+              }
+            ],
+            data: {
+              from: process.env.exchange,
+              to: process.env.contract,
+              quantity: amount,
+              memo: "1:" + process.env.user1
+            }
+          }
+        ]
+      },
+      {
+        blocksBehind: 3,
+        expireSeconds: 30
+      }
+    );
+    console.log("result", result);
+  } catch (err) {
+    console.log("s.m. err--", err);
+  }
+}
+
+async function matchorder(amount, lease_period) {
+  let key_array = [0, 1, 2];
+  let max_apr
+  key_array.forEach(function(item, index) {
+    console.log(item, index);
+    var dataString1 = datafetch +item +"}";
+    var options = {
+      url: process.env.get_table_row,
+      method: "POST",
+      body: dataString1
+    }; 
+    let res = await rp(options);
+    res = JSON.parse(res);
+    if(res.row && res.row.order_stat == "queue" && res.row.lease_period <= lease_period && res.row.rent_amount <= amount)
+    {
+
+    }
+  });
 
 
-
+}
 ///////////////////////////////
 
-app.listen(3000, function () {
-    console.log('listening on 3000,')
+app.listen(3000, function() {
+  console.log("listening on 3000,");
 });
-
 
 ////////////////
 
@@ -89,7 +170,6 @@ app.listen(3000, function () {
 
 // app.post('/register', async (req, res) => {
 
-
 //     let privateWif
 //     //   let towif = privateWif.towif()
 //     /* let abc = await PrivateKey.randomKey();
@@ -99,14 +179,12 @@ app.listen(3000, function () {
 //     let pubkey = PrivateKey.fromString(privateKey).toPublic().toString()
 //     console.log(pubkey) */
 
-
 // let abc = await PrivateKey.randomKey();
 //     const privateKey = "5JamkxEHSjkRgXk46P4MZgz5uNtghh2kCLhe6j8v9jrgD4Rs6vV";
 //     //      5JamkxEHSjkRgXk46P4MZgz5uNtghh2kCLhe6j8v9jrgD4Rs6vV
 //     // EOS4xQz6cjRS5F8uZzHp962yuVDd7xdz9wTpezP5wH2WAXBKYsFca
 //     var account = "arunimaray12";
 //      let dataValue = { username: 'organictoken',balance: "10.0000 EOS", payload: { vaccount: "organictoken" } }
-
 
 //     let action = "registeracc"
 
@@ -129,15 +207,12 @@ app.listen(3000, function () {
 //         throw (err);
 //     }
 
-
-
-
 // })
 // async function postData(url = ``, data = {}) {
 //     // Default options are marked with *
 //     console.log("in post data", data)
 //     try {
-      
+
 //           let res = await axios({
 //               url: url,
 //               method: 'POST',
@@ -198,6 +273,4 @@ app.listen(3000, function () {
 //         signature
 //     });
 
-
 // }
-

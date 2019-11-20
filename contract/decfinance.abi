@@ -4,16 +4,56 @@
     "types": [],
     "structs": [
         {
-            "name": "borrowerdepo",
+            "name": "addexchange",
             "base": "",
             "fields": [
                 {
-                    "name": "username",
+                    "name": "account",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "addproxy",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account_name",
                     "type": "name"
                 },
                 {
-                    "name": "balance",
-                    "type": "asset"
+                    "name": "desc",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "cancelorder",
+            "base": "",
+            "fields": [
+                {
+                    "name": "orderid",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "checkorder",
+            "base": "",
+            "fields": [
+                {
+                    "name": "vaccount",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "exchange",
+            "base": "",
+            "fields": [
+                {
+                    "name": "exchange_account",
+                    "type": "name"
                 }
             ]
         },
@@ -32,9 +72,65 @@
             ]
         },
         {
+            "name": "lease_status",
+            "base": "",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "order_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "lender",
+                    "type": "name"
+                },
+                {
+                    "name": "authorizer",
+                    "type": "name"
+                },
+                {
+                    "name": "stake_to",
+                    "type": "name"
+                },
+                {
+                    "name": "rent_amount",
+                    "type": "asset"
+                },
+                {
+                    "name": "rent_fee",
+                    "type": "asset"
+                },
+                {
+                    "name": "expires_at",
+                    "type": "time_point_sec"
+                },
+                {
+                    "name": "filled_at",
+                    "type": "time_point_sec"
+                }
+            ]
+        },
+        {
+            "name": "leaseunstake",
+            "base": "",
+            "fields": [
+                {
+                    "name": "orderid",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
             "name": "lender",
             "base": "",
             "fields": [
+                {
+                    "name": "sequence",
+                    "type": "uint64"
+                },
                 {
                     "name": "username",
                     "type": "name"
@@ -44,12 +140,24 @@
                     "type": "asset"
                 },
                 {
-                    "name": "rex_balance",
+                    "name": "max_lease_period",
+                    "type": "uint32"
+                },
+                {
+                    "name": "vote_choice",
+                    "type": "name"
+                },
+                {
+                    "name": "last_lease_out",
+                    "type": "time_point_sec"
+                },
+                {
+                    "name": "total_leaseout_amount",
                     "type": "asset"
                 },
                 {
-                    "name": "lease_period",
-                    "type": "uint32"
+                    "name": "initial_transfer",
+                    "type": "bool"
                 }
             ]
         },
@@ -68,6 +176,10 @@
                 {
                     "name": "lease_period",
                     "type": "uint32"
+                },
+                {
+                    "name": "vote_choice",
+                    "type": "name"
                 }
             ]
         },
@@ -80,7 +192,11 @@
                     "type": "uint64"
                 },
                 {
-                    "name": "username",
+                    "name": "authorizer",
+                    "type": "name"
+                },
+                {
+                    "name": "stake_to",
                     "type": "name"
                 },
                 {
@@ -96,42 +212,26 @@
                     "type": "uint32"
                 },
                 {
-                    "name": "is_leased",
-                    "type": "bool"
+                    "name": "resource_type",
+                    "type": "string"
+                },
+                {
+                    "name": "order_stat",
+                    "type": "string"
                 }
             ]
         },
         {
-            "name": "orders_filled",
+            "name": "proxylist",
             "base": "",
             "fields": [
                 {
-                    "name": "id",
-                    "type": "uint64"
-                },
-                {
-                    "name": "borrower",
+                    "name": "pxoxy_account",
                     "type": "name"
                 },
                 {
-                    "name": "lender",
-                    "type": "name"
-                },
-                {
-                    "name": "rent_amount",
-                    "type": "asset"
-                },
-                {
-                    "name": "rent_payable",
-                    "type": "asset"
-                },
-                {
-                    "name": "expires_at",
-                    "type": "time_point_sec"
-                },
-                {
-                    "name": "filled_at",
-                    "type": "time_point_sec"
+                    "name": "proxy_name",
+                    "type": "string"
                 }
             ]
         },
@@ -228,6 +328,16 @@
                 {
                     "name": "nonce",
                     "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "withdraw",
+            "base": "",
+            "fields": [
+                {
+                    "name": "vaccount",
+                    "type": "name"
                 }
             ]
         },
@@ -376,6 +486,31 @@
     ],
     "actions": [
         {
+            "name": "addexchange",
+            "type": "addexchange",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "addproxy",
+            "type": "addproxy",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "cancelorder",
+            "type": "cancelorder",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "checkorder",
+            "type": "checkorder",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "leaseunstake",
+            "type": "leaseunstake",
+            "ricardian_contract": ""
+        },
+        {
             "name": "regaccount",
             "type": "regaccount",
             "ricardian_contract": ""
@@ -383,6 +518,11 @@
         {
             "name": "registeracc",
             "type": "registeracc",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "withdraw",
+            "type": "withdraw",
             "ricardian_contract": ""
         },
         {
@@ -423,29 +563,8 @@
     ],
     "tables": [
         {
-            "name": ".borrowerblc",
-            "type": "borrowerdepo",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
-        },
-        {
-            "name": ".lenderinfo",
+            "name": ".lenderinfo1",
             "type": "lender",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
-        },
-        {
-            "name": ".orders",
-            "type": "orders",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
-        },
-        {
-            "name": ".ordersfill",
-            "type": "orders_filled",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
@@ -458,8 +577,8 @@
             "key_types": []
         },
         {
-            "name": "borrowerblc",
-            "type": "shardbucket",
+            "name": "exchange",
+            "type": "exchange",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
@@ -472,7 +591,14 @@
             "key_types": []
         },
         {
-            "name": "lenderinfo",
+            "name": "leasestat",
+            "type": "lease_status",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "lenderinfo1",
             "type": "shardbucket",
             "index_type": "i64",
             "key_names": [],
@@ -480,14 +606,14 @@
         },
         {
             "name": "orders",
-            "type": "shardbucket",
+            "type": "orders",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
         },
         {
-            "name": "ordersfill",
-            "type": "shardbucket",
+            "name": "proxylist",
+            "type": "proxylist",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
