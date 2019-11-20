@@ -31,14 +31,14 @@ void decfinance::transfer(name payer, name reciever, asset value, std::string me
       name stake_to = name(order_detail[1].c_str());
       auto duration = std::stoi(order_detail[2]);
       std::string resource_type = order_detail[3];
-      createorder(payer, stake_to, lease_eos, value, duration, resource_type);
+     // createorder(payer, stake_to, lease_eos, value, duration, resource_type);
     }
     else if (memo_split[0] == "1") //supply side central exchange transfer
     {
       name vaccount_user = name(memo_split[1].c_str());
       modleaseblc(vaccount_user, value);
       proxytransfer(vaccount_user, value);
-      matchorder(vaccount_user, value);
+      //matchorder(vaccount_user, value);
     }
     else
     {
@@ -70,8 +70,9 @@ void decfinance::modleaseblc(name vaccount_user, asset amount)
   }
 }
 
-void decfinance::createorder(name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type)
+void decfinance::createorder(uint64_t id , name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type)
 {
+  require_auth(_self);
   orders_tab order(_self, _self.value);
   order.emplace(_self, [&](auto &e) {
     e.id = order.available_primary_key();
@@ -102,7 +103,7 @@ void decfinance::proxytransfer(name vaccount_user, asset amount)
   }
 }
 
-void decfinance::matchorder(name vaccount_user, asset amount)
+void decfinance::matchorder(name vaccount_user, uint64_t id, uint64_t orderstat_id)
 {
 
   lender_tab lender(_self, _self.value);
@@ -116,31 +117,31 @@ void decfinance::matchorder(name vaccount_user, asset amount)
     int apr_cal = 0;
 
     ///////////////////////////////////// to be calculated from backend/////
-    auto order_itr = order.begin();
-    while (order_itr != order.end())
-    {
-      if (order_itr->order_stat == "queue" && order_itr->lease_period <= itr->max_lease_period && order_itr->rent_amount <= itr->balance)
-      {
-        flag = 1;
-        if (apr_cal <= (order_itr->rent_offer.amount / order_itr->lease_period))
-        {
-          orderid = order_itr->id;
-          apr_cal = order_itr->rent_offer.amount / order_itr->lease_period;
-        }
-      }
-      order_itr++;
-    }
+    // auto order_itr = order.begin();
+    // while (order_itr != order.end())
+    // {
+    //   if (order_itr->order_stat == "queue" && order_itr->lease_period <= itr->max_lease_period && order_itr->rent_amount <= itr->balance)
+    //   {
+    //     flag = 1;
+    //     if (apr_cal <= (order_itr->rent_offer.amount / order_itr->lease_period))
+    //     {
+    //       orderid = order_itr->id;
+    //       apr_cal = order_itr->rent_offer.amount / order_itr->lease_period;
+    //     }
+    //   }
+    //   order_itr++;
+    // }
     ///////////////////////////////////////////
-    if (flag == 1)
-    {
-      auto itr_orderstat = order.find(orderid);
+    // if (flag == 1)
+    // {
+      auto itr_orderstat = order.find(id);  //orderid
 
       staketoorder(itr->vote_choice, itr_orderstat->stake_to, itr_orderstat->rent_amount, itr_orderstat->resource_type);
 
       lease_status_tab orderfill(_self, _self.value);
       orderfill.emplace(_self, [&](auto &e) {
-        e.id = orderfill.available_primary_key();
-        e.order_id = orderid;
+        e.id = orderstat_id;
+        e.order_id = id;
         e.lender = vaccount_user;
         e.authorizer = itr_orderstat->authorizer;
         e.stake_to = itr_orderstat->stake_to;
@@ -149,7 +150,6 @@ void decfinance::matchorder(name vaccount_user, asset amount)
         e.expires_at = time_point_sec(current_time_point()) + (uint32_t)(itr_orderstat->lease_period * 24 * 60 * 60);
         e.filled_at = time_point_sec(current_time_point());
       });
-
       order.modify(itr_orderstat, get_self(), [&](auto &e) {
         e.order_stat = "active";
       });
@@ -159,7 +159,7 @@ void decfinance::matchorder(name vaccount_user, asset amount)
         e.last_lease_out = current_time_point();
         e.total_leaseout_amount += itr_orderstat->rent_amount;
       });
-    }
+   // }
   }
 }
 
@@ -189,14 +189,14 @@ void decfinance::staketoorder(name proxy, name stake_to, asset amount, std::stri
       .send();
 }
 
-void decfinance::checkorder(name vaccount)
+void decfinance::checkorder(name vaccount, uint64_t id, uint64_t orderstat_id)
 {
   require_auth(_self);
   lender_tab lender(_self, _self.value);
   auto itr = lender.find(vaccount.value);
   check(itr != lender.end(), "vaccount not found");
   check(itr->initial_transfer == true, "Initial amount not transferred by vaccount user");
-  matchorder(vaccount, itr->balance);
+  matchorder(vaccount, id);
 }
 
 void decfinance::withdraw(name vaccount)

@@ -35,9 +35,9 @@ public:
   DAPPSERVICES_ACTIONS()
 
   void transfer(name payer, name reciever, asset value, std::string memo);
-  void createorder(name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type);
+  void createorder(uint64_t id, name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type);
   void proxytransfer(name vaccount_user, asset amount);
-  void matchorder(name vaccount_user, asset amount);
+  void matchorder(name vaccount_user, uint64_t id, uint64_t orderstat_id);
   void staketoorder(name proxy, name stake_to, asset amount, std::string resource_type);
   void modleaseblc(name vaccount_user, asset amount);
 
@@ -52,7 +52,7 @@ public:
   };
 
   [[eosio::action]] void registeracc(login_struct payload);
-  [[eosio::action]] void checkorder(name vaccount);
+  [[eosio::action]] void checkorder(name vaccount, uint64_t id, uint64_t orderstat_id);
   [[eosio::action]] void withdraw(name vaccount);
   [[eosio::action]] void leaseunstake(uint64_t orderid);
   [[eosio::action]] void addproxy(name account_name, std::string desc);

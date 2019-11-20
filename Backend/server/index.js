@@ -8,16 +8,22 @@ const { JsSignatureProvider } = require("eosjs/dist/eosjs-jssig");
 const fetch = require("isomorphic-fetch");
 const { TextEncoder, TextDecoder } = require("text-encoding");
 
-const defaultPrivateKey = "5KZ9RVFNytYUW1oHSVjgFoMvErvmZckgoXzwhHg6svWYDEzWsMB";
-const signatureProvider = new JsSignatureProvider([defaultPrivateKey]);
+const Order = require("./model/order.model");
+const Orderstat = require("./model/orderstatus.model");
+const Ordercounter = require("./model/orderidcounter.model");
+const Orderstatcounter = require("./model/orderstatcounter.model");
+const eosaction = require("./eosaction/eosaction");
+
+const signatureProvider = new JsSignatureProvider([]);
 let dspEndpt = "https://kylin-dsp-2.liquidapps.io";
-let datafetch =  '{"contract":"' +
-process.env.contract +
-'","scope":"' +
-process.env.contract +
-'","table":"' +
-process.env.order_table +
-'","key":'
+let datafetch =
+  '{"contract":"' +
+  process.env.contract +
+  '","scope":"' +
+  process.env.contract +
+  '","table":"' +
+  process.env.order_table +
+  '","key":';
 let rpc = new JsonRpc(dspEndpt, { fetch });
 let api = new Api({
   rpc,
@@ -80,80 +86,143 @@ app.post("/register_user", async (req, res) => {
       }
     );
     console.log("response_registeraction", response_registeraction);
-    lease_transfer(req.body.lease_amount);
+    res.status(200).send("Successful");
+    //lease_transfer(req.body.lease_amount);
   } catch (err) {
     console.log("error-->", err);
     res.status(400).send(err);
   }
 });
 
-async function lease_transfer(amount, lease_period) {
+app.post("/create_order", async (req, res) => {
   try {
-    const signatureProvider = new JsSignatureProvider([
-      process.env.exchange_key
-    ]);
-
-    let rpc = new JsonRpc(dspEndpt, { fetch });
-    let api = new Api({
-      rpc,
-      signatureProvider,
-      textDecoder: new TextDecoder(),
-      textEncoder: new TextEncoder()
-    });
-
-    const result = await api.transact(
-      {
-        actions: [
-          {
-            account: "eosio.token",
-            name: "transfer",
-            authorization: [
-              {
-                actor: process.env.exchange,
-                permission: "active"
-              }
-            ],
-            data: {
-              from: process.env.exchange,
-              to: process.env.contract,
-              quantity: amount,
-              memo: "1:" + process.env.user1
-            }
-          }
-        ]
-      },
-      {
-        blocksBehind: 3,
-        expireSeconds: 30
-      }
+    let orderid = await eosaction.getid();
+    let data = {
+      id: orderid,
+      authorizer: req.body.authorizer,
+      stake_to: req.body.stake_to,
+      rent_amount: req.body.rent_amount,
+      rent_offer: req.body.rent_offer,
+      duration: req.body.duration,
+      resource_type: req.body.resource_type
+    };
+    const result = await eosaction.pushtrx(
+      "createorder",
+      data,
+      process.env.contract
     );
     console.log("result", result);
+
+    let order = new Order();
+    (order.id = orderid),
+      (order.authorizer = req.body.authorizer),
+      (order.stake_to = req.body.stake_to),
+      (order.rent_amount = req.body.rent_amount),
+      (order.rent_offer = req.body.rent_offer),
+      (order.duration = req.body.duration),
+      (order.resource_type = req.body.resource_type);
+    order.order_stat = "queue";
+    order.apr =
+      parseFloat(req.body.rent_offer.split(" ")[0]) /
+      parseFloat(req.body.duration);
+
+    let orderobj = await order.save();
+    console.log("orderobj", orderobj);
+    res.status(400).send(orderobj);
+  } catch (err) {
+    console.log("error-->", err);
+    res.status(400).send(err);
+  }
+});
+
+app.post("/create_order", async (req, res) => {
+  try {
+    let orderid = await eosaction.getid();
+    let data = {
+      id: orderid,
+      authorizer: req.body.authorizer,
+      stake_to: req.body.stake_to,
+      rent_amount: req.body.rent_amount,
+      rent_offer: req.body.rent_offer,
+      duration: req.body.duration,
+      resource_type: req.body.resource_type
+    };
+    const result = await eosaction.pushtrx(
+      "createorder",
+      data,
+      process.env.contract
+    );
+    console.log("result", result);
+
+    let order = new Order();
+    (order.id = orderid),
+      (order.authorizer = req.body.authorizer),
+      (order.stake_to = req.body.stake_to),
+      (order.rent_amount = req.body.rent_amount),
+      (order.rent_offer = req.body.rent_offer),
+      (order.duration = req.body.duration),
+      (order.resource_type = req.body.resource_type);
+
+    let orderobj = await order.save();
+    console.log("orderobj", orderobj);
+    res.status(400).send(orderobj);
+  } catch (err) {
+    console.log("error-->", err);
+    res.status(400).send(err);
+  }
+});
+
+app.post("/lease_transfer", async (req, res) => {
+  try {
+    let data = {
+      from: process.env.exchange,
+      to: process.env.contract,
+      quantity: req.body.amount,
+      memo: "1:" + req.body.account_name
+    };
+    const result = await eosaction.pushtrx("transfer", data, "eosio.token");
+    console.log("result", result);
+    let orderid = matchorder(req.body.amount, req.body.account_name);
+    if(orderid == 0){
+      res.status(200).send("Transferred amount. No match found for this lease request");
+    }
+    else {
+      let data = {
+        from: process.env.exchange,
+        to: process.env.contract,
+        quantity: req.body.amount,
+        memo: "1:" + req.body.account_name
+      };
+      const result = await eosaction.pushtrx("checkfororder", data, "eosio.token");
+    }
   } catch (err) {
     console.log("s.m. err--", err);
   }
-}
+});
 
-async function matchorder(amount, lease_period) {
-  let key_array = [0, 1, 2];
-  let max_apr
-  key_array.forEach(function(item, index) {
+async function matchorder(account) {
+  let orders = await Order.aggregate([
+    { $match: { order_stat: "queue" } },
+    { $sort: { apr: -1 } }
+  ]);
+
+  let vaccount_det = eosaction.getvaccountdet(account);
+  let orderid = 0;
+  let flag = 0;
+  temp.forEach(function(item, index) {
     console.log(item, index);
-    var dataString1 = datafetch +item +"}";
-    var options = {
-      url: process.env.get_table_row,
-      method: "POST",
-      body: dataString1
-    }; 
-    let res = await rp(options);
-    res = JSON.parse(res);
-    if(res.row && res.row.order_stat == "queue" && res.row.lease_period <= lease_period && res.row.rent_amount <= amount)
-    {
-      max_apr = parseFloat(res.row.rent_amount)
+    if (
+      item.lease_period <= vaccount_det.row.lease_period &&
+      parseFloat(item.rent_amount.split(" ")[0]) <=
+        parseFloat(vaccount_det.row.balance.split(" ")[0])
+    ) {
+      orderid = item.id;
+      flag = 1;
+      break;
     }
   });
-
-
 }
+
 ///////////////////////////////
 
 app.listen(3000, function() {
