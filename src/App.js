@@ -1,67 +1,124 @@
 import React, { Component } from "react";
-import ScatterJS from "@scatterjs/core";
-import ScatterEOS from "@scatterjs/eosjs2";
-import { Api, JsonRpc } from "eosjs2";
+import ScatterJS from "scatterjs-core";
+import ScatterEOS from "scatterjs-plugin-eosjs2";
+import { JsonRpc, Api, RpcError } from "eosjs";
 import { network, requiredFields, eosOptions } from "./helpers/Config";
-const rpc = new JsonRpc(network.fullhost());
-const eos = ScatterJS.eos(network, Api, { rpc, beta3: true });
+import Dropdown from "react-bootstrap/Dropdown";
+import DropdownButton from "react-bootstrap/DropdownButton";
+
+const endpoint = "https://eos.greymass.com"; //Mainnet
+let eos;
 
 ScatterJS.plugins(new ScatterEOS());
 
 class App extends Component {
   constructor(props) {
     super(props);
+    ScatterJS.plugins(new ScatterEOS());
+
     this.state = {
       user: {
         name: "",
         publicKey: ""
       },
       order: {
-        CPU: "",
-        NET: "",
+        Bandwidth: "",
+        stakeTo: "",
         Duration: 0,
         Offer: ""
       },
       loggedIn: false,
-      contractAccount: "hehe"
+      contractAccount: "hehe",
+      connected: false,
+      resource_needed: ""
     };
   }
 
+  connect = async () => {
+    const result = await ScatterJS.scatter
+      .connect("hack")
+      .then(connected => {
+        // User does not have Scatter Desktop, Mobile or Classic installed.
+        if (!connected) return console.log("Issue Connecting");
+
+        const scatter = ScatterJS.scatter;
+
+        const requiredFields = {
+          accounts: [network]
+        };
+
+        scatter.getIdentity(requiredFields).then(() => {
+          // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
+          // the user for their account name beforehand. They could still give you a different account.
+
+          console.log("acc", scatter.identity.accounts);
+
+          this.account = scatter.identity.accounts.find(
+            x => x.blockchain === "eos"
+          );
+          console.log("1--->", this.account);
+          if (this.account) this.setState({ loggedIn: true, connected: true });
+
+          // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
+          const rpc = new JsonRpc(endpoint);
+          this.eos = ScatterJS.eos(network, Api, { rpc, beta3: true });
+        });
+
+        window.ScatterJS = null;
+      })
+      .catch(error => console.log(error));
+  };
+
+  transfer = async (action, data) => {
+    return this.state.connected
+      ? await this.eos
+          .transact(
+            {
+              actions: [
+                {
+                  account: "eosio.token",
+                  name: action,
+                  authorization: [
+                    {
+                      actor: this.account.name,
+                      permission: this.account.authority
+                    }
+                  ],
+                  data: {
+                    ...data
+                  }
+                }
+              ]
+            },
+            {
+              blocksBehind: 3,
+              expireSeconds: 30
+            }
+          )
+          .then(res => {
+            alert("Task : " + this.state.taskName + " not done.");
+          })
+          .catch(err => {
+            console.log(err);
+          })
+          .catch(e => console.log(e))
+      : null;
+  };
+
   handleSubmit = async e => {
     e.preventDefault();
-    console.log("order submitted!!", this.state.order);
-    const contractAccount = this.state.contractAccount;
-    const order = this.state.order;
-    const user = this.state.user;
-    const rentAmount = order.CPU + order.NET;
+    const { Bandwidth, Duration, Offer, stakeTo } = this.state.order;
+    const resource_needed = this.state;
+    const memo = `2:${Bandwidth},${stakeTo},${Duration},${resource_needed}`;
 
-    const result = await eos.transact(
-      {
-        actions: [
-          {
-            account: "eosio.token",
-            name: "transfer",
-            authorization: [
-              {
-                actor: user.name,
-                permission: "active"
-              }
-            ],
-            data: {
-              from: user.name,
-              to: contractAccount,
-              quantity: order.Offer,
-              memo: `2:${rentAmount}, ${order.Duration}`
-            }
-          }
-        ]
-      },
-      {
-        blocksBehind: 3,
-        expireSecond: 30
-      }
-    );
-    console.log("result--->", result);
+    console.log("memo--->", memo);
+
+    this.transfer("transfer", {
+      from: this.account.name,
+      to: "leaseconacc1",
+      quantity: Offer,
+      memo: memo
+    });
   };
   handleChange = e => {
     const { name, value } = e.target;
@@ -74,37 +131,29 @@ class App extends Component {
       }
     });
   };
-  componentDidMount() {
-    // this.loginWithScatter();
-  }
 
-  loginWithScatter = async e => {
-    try {
-      let connected = await ScatterJS.scatter.connect("hack", { network });
-      if (connected) {
-        ScatterJS.login().then(accounts => {
-          if (accounts.accounts[0]) {
-            this.setState({
-              user: {
-                name: accounts.accounts[0].name,
-                publicKey: accounts.accounts[0].publicKey
-              }
-            });
-
-            this.setState({ loggedIn: true });
-          }
-        });
-      } else {
-        console.log("Issue Connecting!!");
-      }
-    } catch (error) {
-      alert(error);
+  handleDrop = e => {
+    e.preventDefault();
+    if (e.target.value === "CPU") {
+      this.setState({
+        resource_needed: "CPU"
+      });
+      return <div></div>;
+    } else {
+      this.setState({
+        resource_needed: "NET"
+      });
     }
   };
-  logoutWithScatter = async () => {
-    await ScatterJS.scatter.forgetIdentity();
+  componentDidMount() {
+    this.connect();
+  }
+
+  logout = async () => {
+    await ScatterJS.forgetIdentity();
     this.setState({ loggedIn: false });
   };
+
   render() {
     const Order = this.state.order;
     const User = this.state.user;
@@ -115,25 +164,29 @@ class App extends Component {
           User info:
           <br /> <span>name: {User.name}</span>
         </div>
-        <form onSubmit={this.handleSubmit}>
-          <label>Amount of EOS needed:</label>
+        <form>
+          <label>Choose the Resource you would like to order:</label>
           <br />
-          <label>CPU bandwidth:</label>
-          <input
-            type="text"
-            name="CPU"
-            value={Order.CPU}
-            onChange={this.handleChange}
-          />{" "}
-          <br />
-          <label>NET bandwidth:</label>
-          <input
-            type="text"
-            name="NET"
-            value={Order.NET}
-            onChange={this.handleChange}
-          />{" "}
-          <br />
+          <DropdownButton id="dropdown-item-button" title="Actions">
+            <Dropdown.Item as="button" value="CPU" onClick={this.handleDrop}>
+              CPU
+            </Dropdown.Item>
+            <Dropdown.Item as="button" onClick={this.handleDrop}>
+              NET
+            </Dropdown.Item>
+          </DropdownButton>
+          {this.state.resource_needed && (
+            <div>
+              <label>{this.state.resource_needed} Bandwidth:</label>
+              <input
+                type="text"
+                type="text"
+                name="Bandwidth"
+                value={Order.Bandwidth}
+                onChange={this.handleChange}
+              />
+            </div>
+          )}
           <label>Duration of lease:</label>
           <input
             type="number"
@@ -150,15 +203,15 @@ class App extends Component {
             onChange={this.handleChange}
           />{" "}
           <br />
-          <button>Submit</button>
+          <button onClick={this.handleSubmit}>Submit</button>
         </form>
         <div>
-          <button onClick={this.logoutWithScatter}>Logout</button>
+          <button onClick={this.logout}>Logout</button>
         </div>
       </div>
     ) : (
       <div>
-        <button onClick={this.loginWithScatter}>Login With Scatter</button>
+        <button onClick={this.connect}>Login With Scatter</button>
       </div>
     );
   }
