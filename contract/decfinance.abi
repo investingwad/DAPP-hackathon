@@ -44,6 +44,48 @@
                 {
                     "name": "vaccount",
                     "type": "name"
+                },
+                {
+                    "name": "id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "orderstat_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "createorder",
+            "base": "",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "authorizer",
+                    "type": "name"
+                },
+                {
+                    "name": "stake_to",
+                    "type": "name"
+                },
+                {
+                    "name": "rent_amount",
+                    "type": "asset"
+                },
+                {
+                    "name": "rent_offer",
+                    "type": "asset"
+                },
+                {
+                    "name": "duration",
+                    "type": "uint32"
+                },
+                {
+                    "name": "resource_type",
+                    "type": "string"
                 }
             ]
         },
@@ -503,6 +545,11 @@
         {
             "name": "checkorder",
             "type": "checkorder",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "createorder",
+            "type": "createorder",
             "ricardian_contract": ""
         },
         {

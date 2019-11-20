@@ -14,10 +14,10 @@ const Ordercounter = require('../model/orderidcounter.model')
 const Orderstatcounter = require('../model/orderstatcounter.model')
 
 const signatureProvider = new JsSignatureProvider([
-  process.env.contract_key,
-  process.env.proxy1_key,
-  process.env.proxy2_key,
-  process.env.exchange_key
+  // process.env.contract_key,
+  // process.env.proxy1_key,
+  // process.env.proxy2_key,
+  // process.env.exchange_key
 ])
 let dspEndpt = 'https://kylin-dsp-2.liquidapps.io'
 let rpc = new JsonRpc(dspEndpt, { fetch })

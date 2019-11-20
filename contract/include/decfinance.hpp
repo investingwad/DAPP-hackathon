@@ -6,19 +6,17 @@
 #include <eosio/symbol.hpp>
 #include <eosio/system.hpp>
 #include <eosio/singleton.hpp>
-#include <math.h>
 #include <string>
 #include "./dist/contracts/eos/dappservices/vaccounts.hpp"
 #include "./dist/contracts/eos/dappservices/ipfs.hpp"
 #include "./dist/contracts/eos/dappservices/multi_index.hpp"
 
 #define DAPPSERVICES_ACTIONS() \
-  XSIGNAL_DAPPSERVICE_ACTION   \
-  IPFS_DAPPSERVICE_ACTIONS     \
+  XSIGNAL_DAPPSERVICE_ACTION \
+  IPFS_DAPPSERVICE_ACTIONS \
   VACCOUNTS_DAPPSERVICE_ACTIONS
 #define DAPPSERVICE_ACTIONS_COMMANDS() \
-  IPFS_SVC_COMMANDS()                  \
-  VACCOUNTS_SVC_COMMANDS()
+  IPFS_SVC_COMMANDS()VACCOUNTS_SVC_COMMANDS() 
 
 #define CONTRACT_NAME() decfinance
 
@@ -35,7 +33,6 @@ public:
   DAPPSERVICES_ACTIONS()
 
   void transfer(name payer, name reciever, asset value, std::string memo);
-  void createorder(uint64_t id, name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type);
   void proxytransfer(name vaccount_user, asset amount);
   void matchorder(name vaccount_user, uint64_t id, uint64_t orderstat_id);
   void staketoorder(name proxy, name stake_to, asset amount, std::string resource_type);
@@ -58,6 +55,7 @@ public:
   [[eosio::action]] void addproxy(name account_name, std::string desc);
   [[eosio::action]] void addexchange(name account);
   [[eosio::action]] void cancelorder(uint64_t orderid);
+  [[eosio::action]] void createorder(uint64_t id, name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type);
 
   TABLE orders
   {

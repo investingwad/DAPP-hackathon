@@ -196,7 +196,7 @@ void decfinance::checkorder(name vaccount, uint64_t id, uint64_t orderstat_id)
   auto itr = lender.find(vaccount.value);
   check(itr != lender.end(), "vaccount not found");
   check(itr->initial_transfer == true, "Initial amount not transferred by vaccount user");
-  matchorder(vaccount, id);
+  matchorder(vaccount, id, orderstat_id);
 }
 
 void decfinance::withdraw(name vaccount)
@@ -210,7 +210,7 @@ void decfinance::withdraw(name vaccount)
   action(
       permission_level{itr->vote_choice, "active"_n},
       "eosio.token"_n, "transfer"_n,
-      std::make_tuple(itr->vote_choice, "coldwallet12"_n, std::string("transfer to exchange ")))
+      std::make_tuple(itr->vote_choice, "coldwallet12"_n,itr->balance ,std::string("transfer to exchange ")))
       .send();
 }
 
@@ -219,7 +219,7 @@ void decfinance::cancelorder(uint64_t orderid)
   orders_tab orders(_self, _self.value);
   auto itr = orders.find(orderid);
   check(itr != orders.end(), "Order id not found");
-  require_auth(itr->authorizer);
+  require_auth(_self);
   check(itr->order_stat != "active", "can not withdraw. order is active and filled");
 
   action(
@@ -236,6 +236,7 @@ void decfinance::leaseunstake(uint64_t orderid)
   lease_status_tab orderfill(_self, _self.value);
   auto order_itr = orderfill.find(orderid);
   check(order_itr != orderfill.end(), "Order status id not found");
+  check(order_itr->expires_at <= time_point_sec(current_time_point()), "Order not expired yet");
   auto order = orders.find(order_itr->order_id);
   lender_tab lender(_self, _self.value);
   auto itr = lender.find(order_itr->lender.value);
