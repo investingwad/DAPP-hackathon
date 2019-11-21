@@ -24,6 +24,13 @@ lib-cov
 # Coverage directory used by tools like istanbul
 coverage
 
+# ---> Node
+#App Build Stuff
+/server/dist/
+/server/yarn.lock
+yarn.lock
+
+
 # nyc test coverage
 .nyc_output
 
