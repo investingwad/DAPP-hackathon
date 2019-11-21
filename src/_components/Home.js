@@ -13,8 +13,10 @@ import DropdownButton from "react-bootstrap/DropdownButton";
 import OrdersTable from "./OrdersTable";
 import "../global.scss";
 import Navbar from "./Navbar/Navbar";
+import axios from "axios";
 
-const endpoint = "api.kylin.alohaeos.com";
+const endpoint = "https://api.kylin.alohaeos.com";
+let data = [];
 
 ScatterJS.plugins(new ScatterEOS());
 
@@ -29,63 +31,69 @@ class Home extends Component {
         publicKey: ""
       },
       order: {
-        stakeTo: "",
-        bandwidth: "",
-        offer: "",
-        duration: 0
+        staketo: "",
+        bandwith: "",
+        duration: "",
+        offer: null
       },
-      loggedIn: true,
+      loggedIn: false,
       contractAccount: "leaseconacc1",
       connected: false,
       resource_needed: ""
     };
-  }
 
-  connect = async () => {
-    const { user } = this.state;
-    const result = await ScatterJS.scatter
-      .connect("hack")
-      .then(connected => {
+    try {
+      ScatterJS.scatter.connect("hack").then(connected => {
         // User does not have Scatter Desktop, Mobile or Classic installed.
-        if (!connected) return console.log("Issue Connecting!!");
+        if (!connected) return console.log("Issue Connecting");
+
         const scatter = ScatterJS.scatter;
 
         const requiredFields = {
           accounts: [kylinN]
         };
 
-        scatter.getIdentity(requiredFields).then(() => {
-          // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
-          // the user for their account name beforehand. They could still give you a different account.
+        window.ScatterJS = null;
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
-          console.log("acc", scatter.identity.accounts);
+  connect = async () => {
+    const { user } = this.state;
+    const result = await ScatterJS.scatter
+      .getIdentity(requiredFields)
+      .then(() => {
+        // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
+        // the user for their account name beforehand. They could still give you a different account.
 
-          this.account = scatter.identity.accounts.find(
-            x => x.blockchain === "eos"
-          );
-          console.log("1--->", this.account);
-          if (this.account) {
-            this.setState({ loggedIn: true, connected: true });
-            this.setState({
-              user: {
-                ...user,
-                name: this.account.name,
-                publicKey: this.account.publicKey
-              }
-            });
+        console.log("acc", ScatterJS.scatter.identity.accounts);
+
+        this.account = ScatterJS.scatter.identity.accounts.find(
+          x => x.blockchain === "eos"
+        );
+
+        this.setState({ loggedIn: true, connected: true });
+        this.setState({
+          user: {
+            ...user,
+            name: this.account.name,
+            publicKey: this.account.publicKey
           }
-
-          // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
-          const rpc = new JsonRpc(endpoint);
-          this.eos = ScatterJS.eos(kylinN, Api, { rpc, beta3: true });
         });
 
-        window.ScatterJS = null;
-      })
-      .catch(error => console.log(error));
+        // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
+        const rpc = new JsonRpc(endpoint);
+        this.eos = ScatterJS.eos(kylinN, Api, { rpc, beta3: true });
+      });
+
+    window.ScatterJS = null;
   };
 
   transfer = async (action, data) => {
+    // console.log("data--->", data);
+
     return this.state.connected
       ? await this.eos
           .transact(
@@ -111,9 +119,6 @@ class Home extends Component {
               expireSeconds: 30
             }
           )
-          .then(res => {
-            alert("Task : " + this.state.taskName + " not done.");
-          })
           .catch(err => {
             console.log(err);
           })
@@ -123,17 +128,34 @@ class Home extends Component {
 
   handleSubmit = async e => {
     e.preventDefault();
-    const { bandwidth, duration, offer, stakeTo } = this.state.order;
-    const resource_needed = this.state;
-    const memo = `2:${bandwidth},${stakeTo},${duration},${resource_needed}`;
+    const { bandwidth, duration, offer, staketo } = this.state.order;
+    const resource_needed = this.state.resource_needed;
+    const memo = `2:${bandwidth},${staketo},${duration},${resource_needed}`;
+    const data = {
+      authorizer: this.state.user.name,
+      stake_to: staketo,
+      rent_amount: bandwidth,
+      rent_offer: offer,
+      duration: duration,
+      resource_type: resource_needed
+    };
 
-    console.log("memo--->", memo);
+    console.log("memo--->", resource_needed);
+    console.log("data--->", data);
 
     this.transfer("transfer", {
       from: this.account.name,
       to: "leaseconacc1",
       quantity: offer,
       memo: memo
+    }).then(async res => {
+      if (res.transaction_id !== "") {
+        console.log("hetre");
+
+        await axios
+          .post(process.env.REACT_APP_API, data)
+          .then(res => console.log("res---->", res));
+      }
     });
   };
   handleChange = e => {
@@ -150,16 +172,26 @@ class Home extends Component {
 
   handleDrop = e => {
     e.preventDefault();
-    if (e.target.value === "CPU") {
+    if (e.target.value === "cpu") {
       this.setState({
-        resource_needed: "CPU"
+        resource_needed: "cpu"
       });
       return <div></div>;
     } else {
       this.setState({
-        resource_needed: "NET"
+        resource_needed: "net"
       });
     }
+  };
+
+  handleWithdraw = async id => {
+    const result = await axios
+      .post(process.env.REACT_APP_WITHDRAW_API, { order_id: id })
+      .then(res => {
+        console.log("response--->", res);
+
+        // alert("Your order has been withdrawn!!")
+      });
   };
 
   logout = async () => {
@@ -168,38 +200,42 @@ class Home extends Component {
   };
 
   render() {
-    const Order = this.state.order;
+    const { staketo, duration, offer, bandwidth } = this.state.order;
     const User = this.state.user;
-    console.log("name---->", User);
+    console.log("funk---->");
 
     return this.state.loggedIn ? (
-      <div class="container-fluid">
-        <div class="row-nav">
+      <div className="container-fluid">
+        <div className="row-nav">
           <Navbar
             login={this.connect}
             logout={this.logout}
             loggedIn={this.state.loggedIn}
           />
         </div>
-        <div class="row-info">
-          <div>
-            User info:
+        <div className="row-info">
+          <div className="col-lg">
+            User information
             <br />
             <span>Account name: {User.name}</span>
           </div>
+          <div className="col-lg">
+            balance: <Balance name={this.state.user.name} />
+          </div>
         </div>
-        <div class="row-order">
+        <div className="row-order">
           <form>
             <label>Stake to:</label>
             <input
               type="text"
-              name="Stake_to"
-              value={Order.Bandwidth}
+              name="staketo"
+              placeholder="0.0000 EOS"
+              value={staketo}
               onChange={this.handleChange}
             />
             <br />
-            <div class="row">
-              Choose the Resource you would like to order:
+            <div className="row-action">
+              <span>Choose the Resource you would like to order:</span>
               <DropdownButton
                 id="dropdown-item-button"
                 title="Actions"
@@ -207,23 +243,30 @@ class Home extends Component {
               >
                 <Dropdown.Item
                   as="button"
-                  value="CPU"
+                  value="cpu"
                   onClick={this.handleDrop}
                 >
                   CPU
                 </Dropdown.Item>
-                <Dropdown.Item as="button" onClick={this.handleDrop}>
+                <Dropdown.Item
+                  as="button"
+                  value="net"
+                  onClick={this.handleDrop}
+                >
                   NET
                 </Dropdown.Item>
               </DropdownButton>
             </div>
             {this.state.resource_needed && (
               <div>
-                <label>{this.state.resource_needed} Bandwidth:</label>
+                <label>
+                  {this.state.resource_needed.toUpperCase()} Bandwidth:
+                </label>
                 <input
                   type="text"
-                  name="Bandwidth"
-                  value={Order.Bandwidth}
+                  name="bandwidth"
+                  placeholder="0.0000 EOS"
+                  value={bandwidth}
                   onChange={this.handleChange}
                 />
               </div>
@@ -231,30 +274,34 @@ class Home extends Component {
             <label>Duration of lease:</label>
             <input
               type="number"
-              name="Duration"
-              value={Order.Duration}
+              name="duration"
+              placeholder="0"
+              value={duration}
               onChange={this.handleChange}
             />{" "}
-            <br />
+            days <br />
             <label>Offer of rent:</label>
             <input
               type="text"
-              name="Offer"
-              value={Order.Offer}
+              name="offer"
+              placeholder="0.0000 EOS"
+              value={offer}
               onChange={this.handleChange}
             />{" "}
             <br />
-            <button onClick={this.handleSubmit}>Submit</button>
+            <button className="btn btn-success" onClick={this.handleSubmit}>
+              Submit
+            </button>
           </form>
         </div>
 
-        <div class="row-table">
-          <OrdersTable />
+        <div className="row-table">
+          <OrdersTable username={User.name} />
         </div>
       </div>
     ) : (
-      <div class="container-fluid">
-        <div class="row">
+      <div className="container-fluid">
+        <div className="row">
           <Navbar
             login={this.connect}
             logout={this.logout}
@@ -264,6 +311,16 @@ class Home extends Component {
       </div>
     );
   }
+}
+
+function Balance(props) {
+  const rpc = new JsonRpc(endpoint);
+  const balance = async () =>
+    await rpc.get_currency_balance("eosio.token", props.name, "EOS");
+
+  const newBalance = balance.toString();
+
+  return <div>{data}</div>;
 }
 
 export default Home;
