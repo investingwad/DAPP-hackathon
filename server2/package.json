@@ -61,7 +61,7 @@
     "jsonwebtoken": "^8.4.0",
     "method-override": "^3.0.0",
     "moment": "^2.24.0",
-    "mongoose": "5.4.11",
+    "mongoose": "5.7.5",
     "mongoose-auto-increment": "5.0.1",
     "mongoose-sequence": "5.0.1",
     "morgan": "^1.8.0",
