@@ -48,16 +48,17 @@ public:
     EOSLIB_SERIALIZE(login_struct, (username)(balance)(lease_period)(vote_choice))
   };
 
-  struct unreg_struct
+  struct test_struct
   {
     name username;
 
-    EOSLIB_SERIALIZE(unreg_struct, (username))
+    EOSLIB_SERIALIZE(test_struct, (username))
   };
 
   [[eosio::action]] void registeracc(login_struct payload);
   [[eosio::action]] void checkorder(name vaccount, uint64_t id, uint64_t orderstat_id);
-  [[eosio::action]] void withdraw(unreg_struct payload);
+  [[eosio::action]] void withdraw(name vaccount);
+   [[eosio::action]] void testvacc(test_struct payload);
   [[eosio::action]] void leaseunstake(uint64_t orderid);
   [[eosio::action]] void addproxy(name account_name, std::string desc);
   [[eosio::action]] void addexchange(name account);
@@ -182,6 +183,7 @@ public:
   typedef eosio::singleton<"exchange"_n, exchange> exchange_tab;
   typedef eosio::multi_index<"exchange"_n, exchange> exchange_dummy_abi;
 
-  VACCOUNTS_APPLY(((login_struct)(registeracc))((unreg_struct)(withdraw)))
+  VACCOUNTS_APPLY(((login_struct)(registeracc))((test_struct)(testvacc)))
+  //VACCOUNTS_APPLY(((login_struct)(registeracc))((unreg_struct)(withdraw)))
 };
 //CONTRACT_END((registeracc)(regaccount)(xdcommit)(xvinit))

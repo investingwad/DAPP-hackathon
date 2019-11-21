@@ -364,12 +364,22 @@
             ]
         },
         {
-            "name": "unreg_struct",
+            "name": "test_struct",
             "base": "",
             "fields": [
                 {
                     "name": "username",
                     "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "testvacc",
+            "base": "",
+            "fields": [
+                {
+                    "name": "payload",
+                    "type": "test_struct"
                 }
             ]
         },
@@ -406,8 +416,8 @@
             "base": "",
             "fields": [
                 {
-                    "name": "payload",
-                    "type": "unreg_struct"
+                    "name": "vaccount",
+                    "type": "name"
                 }
             ]
         },
@@ -593,6 +603,11 @@
         {
             "name": "registeracc",
             "type": "registeracc",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "testvacc",
+            "type": "testvacc",
             "ricardian_contract": ""
         },
         {

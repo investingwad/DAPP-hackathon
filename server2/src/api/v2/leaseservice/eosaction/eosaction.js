@@ -100,7 +100,9 @@ export async function changeorderstat (orderid) {
 }
 
 export async function getvaccountdet (vaccount) {
-  var dataString1 =
+
+  try{
+    var dataString1 =
     '{"contract":"' +
     process.env.contract +
     '","scope":"' +
@@ -119,6 +121,40 @@ export async function getvaccountdet (vaccount) {
   let res = await rp(options)
   res = JSON.parse(res)
   return res
+  } catch(err)
+  {
+    let res = {}
+    return res
+  }
+  
+}
+
+export async function getvaccounthistory (vaccount) {
+  try {
+  var dataString1 =
+    '{"contract":"' +
+    process.env.contract +
+    '","scope":"' +
+    process.env.contract +
+    '","table":"' +
+    process.env.vaccount_history +
+    '","key":"' +
+    vaccount +
+    '"}'
+  var options = {
+    url: process.env.get_table_row,
+    method: 'POST',
+    body: dataString1
+  }
+ 
+  let res = await rp(options)
+  res = JSON.parse(res)
+  return res
+} catch(err)
+{
+  let res = {}
+  return res
+}
 }
 
 export async function updateexchange (account_name, amount, operation) {

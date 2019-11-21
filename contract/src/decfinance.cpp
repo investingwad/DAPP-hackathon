@@ -200,21 +200,22 @@ void decfinance::checkorder(name vaccount, uint64_t id, uint64_t orderstat_id)
   matchorder(vaccount, id, orderstat_id);
 }
 
-void decfinance::withdraw(unreg_struct payload)
+void decfinance::withdraw(name vaccount)
 {
-  //require_auth(_self);
-  require_vaccount(payload.username);
+  require_auth(_self);
+  //require_vaccount(payload.username);
   lender_tab lender(_self, _self.value);
   lender_history_tab lenderhistory(_self, _self.value);
-  auto itr = lender.find(payload.username.value);
+  auto itr = lender.find(vaccount.value);
   check(itr != lender.end(), "vaccount not found");
+  check(itr->initial_transfer == true, "No amount not transferred by vaccount user");
   check(itr->total_leaseout_amount.amount == 0, "can not withdraw. amount leased out");
   asset amount_to_transfer = itr->balance + itr->total_reward_amount;
-  auto lender_h_itr = lenderhistory.find(payload.username.value);
+  auto lender_h_itr = lenderhistory.find(vaccount.value);
   if (lender_h_itr == lenderhistory.end())
   {
     lenderhistory.emplace(_self, [&](auto &e) {
-      e.username = payload.username;
+      e.username = vaccount;
       e.balance = itr->balance + itr->total_reward_amount;
     });
   }
@@ -231,6 +232,12 @@ void decfinance::withdraw(unreg_struct payload)
       "eosio.token"_n, "transfer"_n,
       std::make_tuple(itr->vote_choice, "coldwallet12"_n, amount_to_transfer, std::string("transfer to exchange ")))
       .send();
+}
+
+void decfinance::testvacc(test_struct payload)
+{
+  require_vaccount(payload.username);
+  print("here");
 }
 
 void decfinance::cancelorder(uint64_t orderid)
@@ -390,7 +397,7 @@ void decfinance::addproxy(name account_name, std::string desc)
 //   }
 // }
 
-EOSIO_DISPATCH_SVC_TRX(decfinance, (registeracc)(regaccount)(xdcommit)(xvinit)(checkorder)(withdraw)(leaseunstake)(addproxy)(addexchange)(cancelorder)(createorder))
+EOSIO_DISPATCH_SVC_TRX(decfinance, (testvacc)(registeracc)(regaccount)(xdcommit)(xvinit)(checkorder)(withdraw)(leaseunstake)(addproxy)(addexchange)(cancelorder)(createorder))
 
 // auto flag = 0;
 //   vector<string> memo_split = split(memo, ":");
