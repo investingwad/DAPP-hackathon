@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const ordercounterschema = new Schema({
-    id: {
+    order_id: {
         type: Number,
         unique: true,
         required: true

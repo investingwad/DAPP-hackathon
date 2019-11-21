@@ -70,8 +70,8 @@ public:
 
     uint64_t primary_key() const { return id; }
   };
-  typedef eosio::multi_index<"orders"_n, orders> orders_tab;
-  //typedef eosio::multi_index<".orders"_n, orders> orders_v_abi;
+  typedef dapp::multi_index<"ordersinfo1"_n, orders> orders_tab;
+  typedef eosio::multi_index<".ordersinfo1"_n, orders> orders_v_abi;
 
   TABLE lease_status
   {
@@ -87,8 +87,8 @@ public:
 
     uint64_t primary_key() const { return id; }
   };
-  typedef eosio::multi_index<"leasestat"_n, lease_status> lease_status_tab;
-  //typedef eosio::multi_index<".leasestat"_n, lease_status> lease_status_v_abi;
+  typedef dapp::multi_index<"orderstat1"_n, lease_status> lease_status_tab;
+  typedef eosio::multi_index<".orderstat1"_n, lease_status> lease_status_v_abi;
 
   TABLE lender
   {
@@ -126,8 +126,8 @@ public:
   };
 
   typedef eosio::multi_index<"lenderinfo1"_n, shardbucket> lender_tab_abi;
-  // typedef eosio::multi_index<"orders"_n, shardbucket> orders_tab_abi;
-  // typedef eosio::multi_index<"leasestat"_n, shardbucket> lease_status_tab_abi;
+  typedef eosio::multi_index<"ordersinfo1"_n, shardbucket> orders_tab_abi;
+  typedef eosio::multi_index<"orderstat1"_n, shardbucket> lease_status_tab_abi;
   //typedef eosio::multi_index<"borrowerblc"_n, shardbucket> borrowerdepo_tab_abi;
 
   vector<string>

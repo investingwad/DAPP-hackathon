@@ -617,6 +617,20 @@
             "key_types": []
         },
         {
+            "name": ".ordersinfo1",
+            "type": "orders",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": ".orderstat1",
+            "type": "lease_status",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
             "name": ".vkey",
             "type": "vkey",
             "index_type": "i64",
@@ -638,13 +652,6 @@
             "key_types": []
         },
         {
-            "name": "leasestat",
-            "type": "lease_status",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
-        },
-        {
             "name": "lenderinfo1",
             "type": "shardbucket",
             "index_type": "i64",
@@ -652,8 +659,15 @@
             "key_types": []
         },
         {
-            "name": "orders",
-            "type": "orders",
+            "name": "ordersinfo1",
+            "type": "shardbucket",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "orderstat1",
+            "type": "shardbucket",
             "index_type": "i64",
             "key_names": [],
             "key_types": []

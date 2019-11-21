@@ -31,6 +31,18 @@ router.post("/leaseunstake", (req, res) => {
     leaseController.leaseunstake(req, res)
 })
 
+router.get('/get_orderdet', (req, res) => {
+    leaseController.get_orderdet(req, res)
+  })
+  
+  router.get('/get_orderstatdet', (req, res) => {
+    leaseController.get_orderstatdet(req, res)
+  })
+  
+  router.get('/get_accountblc/:vaccount', (req, res) => {
+    leaseController.get_accountblc(req, res)
+  })
+  
 
 
 export default router;

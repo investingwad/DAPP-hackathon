@@ -31,7 +31,7 @@ void decfinance::transfer(name payer, name reciever, asset value, std::string me
       name stake_to = name(order_detail[1].c_str());
       auto duration = std::stoi(order_detail[2]);
       std::string resource_type = order_detail[3];
-     // createorder(payer, stake_to, lease_eos, value, duration, resource_type);
+      // createorder(payer, stake_to, lease_eos, value, duration, resource_type);
     }
     else if (memo_split[0] == "1") //supply side central exchange transfer
     {
@@ -70,12 +70,12 @@ void decfinance::modleaseblc(name vaccount_user, asset amount)
   }
 }
 
-void decfinance::createorder(uint64_t id , name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type)
+void decfinance::createorder(uint64_t id, name authorizer, name stake_to, asset rent_amount, asset rent_offer, uint32_t duration, std::string resource_type)
 {
   require_auth(_self);
   orders_tab order(_self, _self.value);
   order.emplace(_self, [&](auto &e) {
-    e.id = order.available_primary_key();
+    e.id = id;
     e.authorizer = authorizer;
     e.stake_to = stake_to;
     e.rent_amount = rent_amount;
@@ -134,32 +134,32 @@ void decfinance::matchorder(name vaccount_user, uint64_t id, uint64_t orderstat_
     ///////////////////////////////////////////
     // if (flag == 1)
     // {
-      auto itr_orderstat = order.find(id);  //orderid
+    auto itr_orderstat = order.find(id); //orderid
+    check(itr_orderstat != order.end(), "Order id not found");
+    staketoorder(itr->vote_choice, itr_orderstat->stake_to, itr_orderstat->rent_amount, itr_orderstat->resource_type);
 
-      staketoorder(itr->vote_choice, itr_orderstat->stake_to, itr_orderstat->rent_amount, itr_orderstat->resource_type);
+    lease_status_tab orderfill(_self, _self.value);
+    orderfill.emplace(_self, [&](auto &e) {
+      e.id = orderstat_id;
+      e.order_id = id;
+      e.lender = vaccount_user;
+      e.authorizer = itr_orderstat->authorizer;
+      e.stake_to = itr_orderstat->stake_to;
+      e.rent_amount = itr_orderstat->rent_amount;
+      e.rent_fee = itr_orderstat->rent_offer;
+      e.expires_at = time_point_sec(current_time_point()) + (uint32_t)(itr_orderstat->lease_period * 24 * 60 * 60);
+      e.filled_at = time_point_sec(current_time_point());
+    });
+    order.modify(itr_orderstat, get_self(), [&](auto &e) {
+      e.order_stat = "active";
+    });
 
-      lease_status_tab orderfill(_self, _self.value);
-      orderfill.emplace(_self, [&](auto &e) {
-        e.id = orderstat_id;
-        e.order_id = id;
-        e.lender = vaccount_user;
-        e.authorizer = itr_orderstat->authorizer;
-        e.stake_to = itr_orderstat->stake_to;
-        e.rent_amount = itr_orderstat->rent_amount;
-        e.rent_fee = itr_orderstat->rent_offer;
-        e.expires_at = time_point_sec(current_time_point()) + (uint32_t)(itr_orderstat->lease_period * 24 * 60 * 60);
-        e.filled_at = time_point_sec(current_time_point());
-      });
-      order.modify(itr_orderstat, get_self(), [&](auto &e) {
-        e.order_stat = "active";
-      });
-
-      lender.modify(itr, get_self(), [&](auto &e) {
-        e.balance -= itr_orderstat->rent_amount;
-        e.last_lease_out = current_time_point();
-        e.total_leaseout_amount += itr_orderstat->rent_amount;
-      });
-   // }
+    lender.modify(itr, get_self(), [&](auto &e) {
+      e.balance -= itr_orderstat->rent_amount;
+      e.last_lease_out = current_time_point();
+      e.total_leaseout_amount += itr_orderstat->rent_amount;
+    });
+    // }
   }
 }
 
@@ -210,7 +210,7 @@ void decfinance::withdraw(name vaccount)
   action(
       permission_level{itr->vote_choice, "active"_n},
       "eosio.token"_n, "transfer"_n,
-      std::make_tuple(itr->vote_choice, "coldwallet12"_n,itr->balance ,std::string("transfer to exchange ")))
+      std::make_tuple(itr->vote_choice, "coldwallet12"_n, itr->balance, std::string("transfer to exchange ")))
       .send();
 }
 
@@ -370,7 +370,7 @@ void decfinance::addproxy(name account_name, std::string desc)
 //   }
 // }
 
-EOSIO_DISPATCH_SVC_TRX(decfinance, (registeracc)(regaccount)(xdcommit)(xvinit)(checkorder)(withdraw)(leaseunstake)(addproxy)(addexchange)(cancelorder))
+EOSIO_DISPATCH_SVC_TRX(decfinance, (registeracc)(regaccount)(xdcommit)(xvinit)(checkorder)(withdraw)(leaseunstake)(addproxy)(addexchange)(cancelorder)(createorder))
 
 // auto flag = 0;
 //   vector<string> memo_split = split(memo, ":");

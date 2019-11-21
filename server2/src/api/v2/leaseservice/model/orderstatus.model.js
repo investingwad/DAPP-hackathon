@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const orderstatschema = new Schema({
-    id: {
+    orderstat_id: {
         type: Number,
         unique: true,
         required: true

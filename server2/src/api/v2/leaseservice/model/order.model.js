@@ -19,7 +19,7 @@ const orderschema = new Schema({
         type: String
     },
     lease_period: {
-        type: String
+        type: Number
     },
     resource_type: {
         type: String

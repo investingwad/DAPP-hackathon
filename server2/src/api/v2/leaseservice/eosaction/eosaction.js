@@ -1,8 +1,6 @@
 const dotenv = require('dotenv')
 dotenv.config()
-const express = require('express')
-const bodyParser = require('body-parser')
-const cors = require('cors')
+var rp = require('request-promise')
 const { Api, JsonRpc, RpcError } = require('eosjs')
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig')
 const fetch = require('isomorphic-fetch')
@@ -29,9 +27,7 @@ let api = new Api({
   textEncoder: new TextEncoder()
 })
 
-export async function pushtrx (method, data, account) {
-  let resobj = {}
-  try {
+export async function pushtrx (method, data, account, actor) {
     const result = await api.transact(
       {
         actions: [
@@ -40,7 +36,7 @@ export async function pushtrx (method, data, account) {
             name: method,
             authorization: [
               {
-                actor: account,
+                actor: actor,
                 permission: 'active'
               }
             ],
@@ -53,47 +49,48 @@ export async function pushtrx (method, data, account) {
         expireSeconds: 30
       }
     )
-    console.log('result', result)
-    resobj.res = result
-    return resobj
-  } catch (err) {
-    console.log('s.m. err--', err)
-    return err
-  }
+   
+    return result
+ 
 }
 
 export async function getid () {
-  let res = await Ordercounter.findOne({}, {}, { sort: { created_at: -1 } })
-  if (!res) {
+  let res = await Ordercounter.find()
+  console.log("ghg",res[0])
+  if (res.length == 0) {
     let orderid = new Ordercounter()
-    orderid.order_id = 1
+    orderid.order_id = 111
     await orderid.save()
-    return 1
+    return 111
   } else {
-    res.id = id++
-    await res.save()
-    return res.id
+    let id = res[0].order_id
+   
+    res[0].order_id += 1
+    res[0].save() 
+    return ++id
   }
 }
 
 export async function getorderstatid () {
-  let res = await Orderstatcounter.findOne({}, {}, { sort: { created_at: -1 } })
-  if (!res) {
+  let res = await Orderstatcounter.find()
+  if (res.length == 0) {
     let orderstatid = new Orderstatcounter()
-    orderstatid.orderstat_id = 1
+    orderstatid.orderstat_id = 222
     await orderstatid.save()
-    return 1
+    return 222
   } else {
-    res.id = id++
-    await res.save()
-    return res.id
+    let id = res[0].orderstat_id
+   
+    res[0].orderstat_id += 1
+    res[0].save() 
+    return ++id
   }
 }
 
 export async function changeorderstat (orderid) {
-  let res = await Order.findOne({ id: orderid })
+  let res = await Order.findOne({ order_id: orderid })
 
-  if (!res) {
+  if (res==null) {
     return 0
   } else {
     res.order_stat = 'active'
@@ -102,7 +99,7 @@ export async function changeorderstat (orderid) {
   }
 }
 
-export async function getaccountblc (vaccount) {
+export async function getvaccountdet (vaccount) {
   var dataString1 =
     '{"contract":"' +
     process.env.contract +
@@ -118,18 +115,20 @@ export async function getaccountblc (vaccount) {
     method: 'POST',
     body: dataString1
   }
-  resobj.res = {}
-  res = await rp(options)
-  resobj.res = JSON.parse(res)
-  console.log(res)
-  return resobj
+ 
+  let res = await rp(options)
+  res = JSON.parse(res)
+  return res
 }
 
 export async function updateexchange (account_name, amount, operation) {
   try {
     let res = await Userbalance.findOne({ user: account_name })
+    console.log("response1==",res)
     if (operation == 'transfer') {
-      if (res) {
+     
+      if (res!=null) {
+        
         let blc =
           parseFloat(res.balance.split(' ')[0]) -
           parseFloat(amount.split(' ')[0])
@@ -143,30 +142,49 @@ export async function updateexchange (account_name, amount, operation) {
             .toString() + ' EOS'
         await res.save()
       } else {
-        let balance = await api.rpc.get_currency_balance({
-          code: 'eosio.token',
-          account: process.env.exchange
-        })
+        let balance = await api.rpc.get_currency_balance(
+          "eosio.token",
+          process.env.exchange,
+          "EOS"
+        )
+        console.log("currency balance=",balance[0])
+        if(!balance) balance = "0.0000 EOS" 
+        else balance = balance[0]
+
         let exchngeblc = new Userbalance()
+        exchngeblc.user = account_name
         exchngeblc.balance = balance
         exchngeblc.lease_out = amount
         exchngeblc.save()
       }
     } else if (operation == 'withdraw') {
-      if (res) {
-        let balance = await api.rpc.get_currency_balance({
-          code: 'eosio.token',
-          account: process.env.exchange
-        })
-        let blc =
-          parseFloat(res.balance.split(' ')[0]) -
-          parseFloat(res.lease_out.split(' ')[0])
-        res.balance = balance
+      console.log("else")
+      if (res!=null) {
+        let balance = await api.rpc.get_currency_balance(
+          'eosio.token',
+          process.env.exchange,
+          "EOS"
+        )
+        if(balance)
+        {
+        res.balance = balance[0]
         res.lease_out = '0.0000 EOS'
         await res.save()
+        }
+        
       }
     }
   } catch (err) {
-    console.log(err)
+    console.log("error--",err)
   }
+}
+
+export async function getcurrencybalance (account) {
+  let balance = await api.rpc.get_currency_balance(
+    'eosio.token',
+    process.env.exchange,
+    "EOS"
+  )
+
+  return balance
 }
