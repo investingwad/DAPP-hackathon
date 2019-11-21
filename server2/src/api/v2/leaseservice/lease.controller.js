@@ -339,7 +339,7 @@ leaseController.leaseunstake = async (req, res) => {
 
 leaseController.get_orderdet = async (req, res) => {
   try {
-    let order = await Order.find({});
+    let order = await Order.find({authorizer : req.params.authorizer});
     if (order) {
       res.status(200).send(order);
     } else {

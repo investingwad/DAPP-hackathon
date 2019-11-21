@@ -31,7 +31,7 @@ router.post("/leaseunstake", (req, res) => {
     leaseController.leaseunstake(req, res)
 })
 
-router.get('/get_orderdet', (req, res) => {
+router.get('/get_orderdet/:authorizer', (req, res) => {
     leaseController.get_orderdet(req, res)
   })
   
