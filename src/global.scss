@@ -1,0 +1,63 @@
+html {
+  padding: 20px;
+}
+
+.container-fluid {
+  height: 100vh;
+}
+
+.Wrapper {
+  display: flex;
+  width: 100%;
+  max-height: 7.5%;
+  border-bottom: 1px groove rgb(0, 48, 207);
+  position: fixed;
+  top: 0px;
+  bottom: 0px;
+  left: 0px;
+  right: 0px;
+  box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.1);
+  padding-bottom: 20px;
+  background-color: white;
+  flex-wrap: nowrap;
+  margin: 1px;
+}
+
+.Panel {
+  display: flex;
+  justify-content: flex-center;
+  height: 20px;
+  width: 100%;
+  margin-top: 1%;
+  align-items: center;
+  color: black;
+}
+
+.Button {
+  display: inline;
+  color: white;
+  margin: 0 10px 0 0;
+  font-family: Lato;
+  font-size: 16px;
+  font-weight: 400;
+  background-color: rgb(0, 84, 194);
+  border: 0;
+}
+
+.Button:hover {
+  border: 1px solid white;
+}
+
+.row-nav {
+    margin-bottom: 5%;
+}
+
+.row-info {
+    margin-bottom: 5%;
+
+}
+
+.row-order {
+    margin-bottom: 5%;
+
+}
