@@ -300,6 +300,9 @@ leaseController.withdraw = async (req, res) => {
       process.env.contract
     )
     console.log('result', result)
+    return res
+        .status(200)
+         .send({ message: 'Successfully withdrawn lease-out request' })
     // let client = await createClient({
     //   network: 'kylin',
     //   httpEndpoint: dspEndpt,
