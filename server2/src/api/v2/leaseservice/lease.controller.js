@@ -10,6 +10,7 @@ const eosaction = require('./eosaction/eosaction')
 
 const { createClient } = require('@liquidapps/dapp-client')
 var client
+let dspEndpt = "https://kylin-dsp-2.liquidapps.io"
 // const getClient = async () => {
 //   if (client) return client
 //   client = await createClient({
@@ -31,10 +32,7 @@ leaseController.register_user = async (req, res) => {
       httpEndpoint: dspEndpt,
       fetch: fetch
     })
-    const service = await client.service(
-      'vaccounts',
-      process.env.contract
-    )
+    const service = await client.service('vaccounts', process.env.contract)
     const response_reg = await service.push_liquid_account_transaction(
       process.env.contract,
       process.env.contract_key,
@@ -116,6 +114,11 @@ leaseController.lease_transfer = async (req, res) => {
     }
     const result = await eosaction.pushtrx('transfer', data, 'eosio.token')
     console.log('result', result)
+    let updateexchange = await eosaction.updateexchange(
+      req.body.account_name,
+      req.body.amount,
+      'transfer'
+    )
   } catch (err) {
     console.log('s.m. err--', err)
   }
@@ -156,6 +159,11 @@ leaseController.match_order = async (req, res) => {
         data,
         process.env.contract
       )
+
+      let filled_at = new Date()
+      let duration = filled_at.setDate(filled_at.getDate() + duration)
+      sevenDaysFromNow = new Date(sevenDaysFromNow).toISOString()
+
       let orderstat = new Orderstat()
       orderstat.id = order_stat_id
       orderstat.order_id = orderid
@@ -164,8 +172,8 @@ leaseController.match_order = async (req, res) => {
       orderstat.stake_to = orderobj.stake_to
       orderstat.rent_amount = orderobj.rent_amount
       orderstat.rent_fee = orderobj.rent_offer
-      orderstat.expires_at = orderobj.duration
-      orderstat.filled_at = orderobj.resource_type
+      orderstat.expires_at = new Date(duration).toISOString().split('.')[0]
+      orderstat.filled_at = filled_at.toISOString().split('.')[0]
 
       let ordderstatres = await orderstat.save()
       res.status(200).send(ordderstatres)
@@ -186,7 +194,11 @@ leaseController.withdraw = async (req, res) => {
       process.env.contract
     )
     console.log('result', result)
-
+    let updateexchange = await eosaction.updateexchange(
+      req.body.account_name,
+      req.body.amount,
+      'withdraw'
+    )
     res.status(400).send('Successfully withdrawn lease-out request')
   } catch (err) {
     console.log('error-->', err)
@@ -235,6 +247,54 @@ leaseController.leaseunstake = async (req, res) => {
       await order.remove()
       res.status(400).send('Successfully unstaked')
     }
+  } catch (err) {
+    console.log('error-->', err)
+    res.status(400).send(err)
+  }
+}
+
+leaseController.get_orderdet = async (req, res) => {
+  try {
+    let order = await Orderstat.find({})
+    if (order) {
+      res.status(200).send(order)
+    } else {
+      res.status(200).send('no order details found')
+    }
+  } catch (err) {
+    console.log('error-->', err)
+    res.status(400).send(err)
+  }
+}
+
+leaseController.get_orderstatdet = async (req, res) => {
+  try {
+    let orderstat = await Orderstat.find({})
+    if (orderstat) {
+      res.status(200).send(order)
+    } else {
+      res.status(200).send('no order details found')
+    }
+  } catch (err) {
+    console.log('error-->', err)
+    res.status(400).send(err)
+  }
+}
+
+leaseController.get_accountblc = async (req, res) => {
+  try {
+    let balance = await api.rpc.get_currency_balance({
+      code: 'eosio.token',
+      account: process.env.exchange
+    })
+    let vaccount_blc = getaccountblc(req.params.vaccount)
+    let respobj = {}
+    respobj.user_exchange_blc = balance
+    if (vaccount_blc.res.row) {
+      respobj.userblc_leased_out = vaccount_blc.res.row.balance
+      respobj.userblc_staked = vaccount_blc.res.row.total_leaseout_amount
+    } else respobj.user_leased_out = '0.0000 EOS'
+    res.status(200).send(respobj)
   } catch (err) {
     console.log('error-->', err)
     res.status(400).send(err)

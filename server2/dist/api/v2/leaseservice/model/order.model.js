@@ -1,13 +1,15 @@
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-const orderschema = new Schema({
+'use strict';
+
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
+var orderschema = new Schema({
     order_id: {
         type: Number,
         unique: true,
         required: true
     },
     authorizer: {
-        type: String,
+        type: String
     },
     stake_to: {
         type: String
@@ -32,7 +34,8 @@ const orderschema = new Schema({
     }
 
 }, {
-        timestamps: { createdAt: 'createdAt', updatedAt: 'lastUpdate' }
-})
+    timestamps: { createdAt: 'createdAt', updatedAt: 'lastUpdate' }
+});
 
-module.exports = mongoose.model('Order', orderschema)
+module.exports = mongoose.model('Order', orderschema);
+//# sourceMappingURL=order.model.js.map

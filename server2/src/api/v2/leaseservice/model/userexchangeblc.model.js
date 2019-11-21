@@ -7,10 +7,11 @@ const userblcschema = new Schema({
         required: true
     },
     balance: {
-        type: String,
-        unique: true,
-        required: true
+        type: String,  
     },
+    lease_out: {
+        type: String,
+    }
 
 }, {
         timestamps: { createdAt: 'createdAt', updatedAt: 'lastUpdate' }
