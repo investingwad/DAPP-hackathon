@@ -5,9 +5,10 @@ const fetch = require("isomorphic-fetch");
 
 const Order = require("./model/order.model");
 const Orderstat = require("./model/orderstatus.model");
+const Userkey = require("./model/userkeys.model");
 
 const eosaction = require("./eosaction/eosaction");
-
+let { PrivateKey, PublicKey, Signature, Aes, key_utils, config } = require('eosjs-ecc')
 const { createClient } = require("@liquidapps/dapp-client");
 var client;
 let dspEndpt = "https://kylin-dsp-2.liquidapps.io";
@@ -27,7 +28,7 @@ leaseController.create = (req, res) => {
 
 leaseController.register_user = async (req, res) => {
   if (!req.body.lease_amount || !req.body.lease_period || !req.body.vote_choice || !req.body.account_name){
-    res.status(400).send({ message: "Missing required body parameter" });
+    return res.status(400).send({ message: "Missing required body parameter" });
   }
   try {
     let client = await createClient({
@@ -36,9 +37,14 @@ leaseController.register_user = async (req, res) => {
       fetch: fetch
     });
     const service = await client.service("vaccounts", process.env.contract);
+    let prv_key = await PrivateKey.randomKey();
+     prv_key = prv_key.toWif()
+    console.log(prv_key)
+    let pubkey = PrivateKey.fromString(prv_key).toPublic().toString()
+    console.log(pubkey)
     const response_reg = await service.push_liquid_account_transaction(
       process.env.contract,
-      process.env.contract_key,
+      prv_key,
       "regaccount",
       {
         vaccount: req.body.account_name //process.env.user1 // increment to new account if fails
@@ -48,7 +54,7 @@ leaseController.register_user = async (req, res) => {
 
     const response_registeraction = await service.push_liquid_account_transaction(
       process.env.contract,
-      process.env.contract_key,
+      prv_key,
       "registeracc",
       {
         username: req.body.account_name, //process.env.user1,
@@ -58,27 +64,30 @@ leaseController.register_user = async (req, res) => {
       }
     );
     console.log("response_registeraction", response_registeraction);
-    res.status(200).send({ message: "Successful" });
+    let userkeys = new Userkey()
+    userkeys.user = req.body.account_name
+    userkeys.private = prv_key
+    userkeys.public = pubkey
+    await userkeys.save()
+    return res.status(200).send({ message: "Successful" });
     // lease_transfer(req.body.lease_amount);
   } catch (err) {
     console.log("s.m. err--", err);
     let msg = err.toString().split(":");
     if (msg) {
       let errmsg = msg[msg.length - 1];
-      res.status(400).send({ message: errmsg });
+      return res.status(400).send({ message: errmsg });
     } else {
-      res.status(400).send({ message: "Error while transferring" });
+      return res.status(400).send({ message: "Error while transferring" });
     }
   }
 };
 
 leaseController.create_order = async (req, res) => {
-  console.log("data",req.body.authorizer)
-  console.log("data",req.body.stake_to)
-  console.log("data",req.body.rent_amount)
-  console.log("data",req.body.rent_offer)
-  console.log("data",req.body.duration)
-  console.log("data",req.body.resource_type)
+  if (!req.body.authorizer || !req.body.stake_to || !req.body.rent_amount || !req.body.rent_offer || !req.body.duration || !req.body.resource_type){
+    return res.status(400).send({ message: "Missing required body parameter" });
+  }
+
   try {
     let orderid = await eosaction.getid();
     console.log("oreid received ==", orderid);
@@ -114,20 +123,23 @@ leaseController.create_order = async (req, res) => {
 
     let orderobj = await order.save();
     console.log("orderobj", orderobj);
-    res.status(200).send({ message: orderobj });
+    return res.status(200).send({ message: orderobj });
   } catch (err) {
     console.log("s.m. err--", err);
     let msg = err.toString().split(":");
     if (msg) {
       let errmsg = msg[msg.length - 1];
-      res.status(400).send({ message: errmsg });
+      return res.status(400).send({ message: errmsg });
     } else {
-      res.status(400).send({ message: "Error while transferring" });
+      return res.status(400).send({ message: "Error while transferring" });
     }
   }
 };
 
 leaseController.lease_transfer = async (req, res) => {
+  if (!req.body.amount || !req.body.account_name){
+    return res.status(400).send({ message: "Missing required body parameter" });
+  }
   try {
     let data = {
       from: process.env.exchange,
@@ -142,25 +154,23 @@ leaseController.lease_transfer = async (req, res) => {
       process.env.exchange
     );
     console.log("result", result);
-    let updateexchange = await eosaction.updateexchange(
-      req.body.account_name,
-      req.body.amount,
-      "transfer"
-    );
-    res.status(200).send({ message: "Successfully transferred" });
+    return res.status(200).send({ message: "Successfully transferred" });
   } catch (err) {
     console.log("s.m. err--", err);
     let msg = err.toString().split(":");
     if (msg) {
       let errmsg = msg[msg.length - 1];
-      res.status(400).send({ message: errmsg });
+      return res.status(400).send({ message: errmsg });
     } else {
-      res.status(400).send({ message: "Error while transferring" });
+      return res.status(400).send({ message: "Error while transferring" });
     }
   }
 };
 
 leaseController.match_order = async (req, res) => {
+  if (!req.body.account_name){
+    return res.status(400).send({ message: "Missing required body parameter" });
+  }
  
   try {
     let orders = await Order.aggregate([
@@ -223,10 +233,10 @@ leaseController.match_order = async (req, res) => {
       orderstat.filled_at = new Date().toISOString().split(".")[0];
 
       let ordderstatres = await orderstat.save();
-      res.status(200).send(ordderstatres);
+      return res.status(200).send(ordderstatres);
       //}
     } else {
-      res
+      return res
         .status(200)
         .send({ message: "At present no match found for this lease request" });
     }
@@ -235,48 +245,68 @@ leaseController.match_order = async (req, res) => {
     let msg = err.toString().split(":");
     if (msg) {
       let errmsg = msg[msg.length - 1];
-      res.status(400).send({ message: errmsg });
+      return res.status(400).send({ message: errmsg });
     } else {
-      res.status(400).send({ message: "Error while transferring" });
+      return res.status(400).send({ message: "Error while transferring" });
     }
   }
 };
 
 leaseController.withdraw = async (req, res) => {
+  if (!req.body.account_name){
+    return res.status(400).send({ message: "Missing required body parameter" });
+  }
   try {
-    let data = {
-      vaccount: req.body.account_name
-    };
-    const result = await eosaction.pushtrx(
-      "withdraw",
-      data,
-      process.env.contract,
-      process.env.contract,
-    );
-    console.log("result", result);
-    let vaccount_blc = await eosaction.getvaccountdet(req.body.account_name);
-    if (vaccount_blc.row) {
-       let updateexchange = await eosaction.updateexchange(    
-        req.body.account_name,
-        vaccount_blc.row.balance,
-        "withdraw"
+    // let data = {
+    //   vaccount: req.body.account_name
+    // };
+    // const result = await eosaction.pushtrx(
+    //   "withdraw",
+    //   data,
+    //   process.env.contract,
+    //   process.env.contract,
+    // );
+    // console.log("result", result);
+    let client = await createClient({
+      network: "kylin",
+      httpEndpoint: dspEndpt,
+      fetch: fetch
+    });
+    const service = await client.service("vaccounts", process.env.contract);
+
+    let userkeys = Userkey.findOne({user : req.body.account_name})
+    if(userkeys!=null)
+    {
+      const response_registeraction = await service.push_liquid_account_transaction(
+        process.env.contract,
+        userkeys.private,
+        "withdraw",
+        {
+          username: req.body.account_name, //process.env.user1,
+        }
       );
+      console.log("response_registeraction", response_registeraction);
+      return res.status(200).send({message : "Successfully withdrawn lease-out request"});
+    } else {
+      return res.status(400).send({message : "No private key found for this vaccount"});
     }
-   
-    res.status(200).send({message : "Successfully withdrawn lease-out request"});
+    
   } catch (err) {
     console.log("s.m. err--", err);
     let msg = err.toString().split(":");
     if (msg) {
       let errmsg = msg[msg.length - 1];
-      res.status(400).send({ message: errmsg });
+      return res.status(400).send({ message: errmsg });
     } else {
-      res.status(400).send({ message: "Error while transferring" });
+      return res.status(400).send({ message: "Error while transferring" });
     }
   }
 };
 
 leaseController.cancelorder = async (req, res) => {
+  if (!req.body.order_id){
+    return res.status(400).send({ message: "Missing required body parameter" });
+  }
   try {
     let data = {
       orderid: req.body.order_id
@@ -292,20 +322,23 @@ leaseController.cancelorder = async (req, res) => {
       .remove()
       .exec();
 
-    res.status(200).send({message: "Successfully withdrawn order request"});
+    return res.status(200).send({message: "Successfully withdrawn order request"});
   } catch (err) {
     console.log("s.m. err--", err);
     let msg = err.toString().split(":");
     if (msg) {
       let errmsg = msg[msg.length - 1];
-      res.status(400).send({ message: errmsg });
+      return res.status(400).send({ message: errmsg });
     } else {
-      res.status(400).send({ message: "Error while transferring" });
+      return res.status(400).send({ message: "Error while transferring" });
     }
   }
 };
 
 leaseController.leaseunstake = async (req, res) => {
+  if (!req.body.order_stat_id){
+    return res.status(400).send({ message: "Missing required body parameter" });
+  }
   try {
     let data = {
       orderid: req.body.order_stat_id
@@ -323,31 +356,34 @@ leaseController.leaseunstake = async (req, res) => {
         .remove()
         .exec();
       await order.remove();
-      res.status(400).send("Successfully unstaked");
+      return res.status(200).send("Successfully unstaked");
     }
   } catch (err) {
     console.log("s.m. err--", err);
     let msg = err.toString().split(":");
     if (msg) {
       let errmsg = msg[msg.length - 1];
-      res.status(400).send({ message: errmsg });
+      return res.status(400).send({ message: errmsg });
     } else {
-      res.status(400).send({ message: "Error while transferring" });
+      return res.status(400).send({ message: "Error while transferring" });
     }
   }
 };
 
 leaseController.get_orderdet = async (req, res) => {
+  if (!req.params.authorizer){
+    return res.status(400).send({ message: "Missing required body parameter" });
+  }
   try {
     let order = await Order.find({authorizer : req.params.authorizer});
     if (order) {
-      res.status(200).send(order);
+      return res.status(200).send(order);
     } else {
-      res.status(200).send("no order details found");
+      return res.status(400).send({message : "no order details found"});
     }
   } catch (err) {
     console.log("error-->", err);
-    res.status(400).send(err);
+    return res.status(400).send(err);
   }
 };
 
@@ -355,13 +391,13 @@ leaseController.get_orderstatdet = async (req, res) => {
   try {
     let orderstat = await Orderstat.find({});
     if (orderstat) {
-      res.status(200).send(orderstat);
+      return res.status(200).send(orderstat);
     } else {
-      res.status(200).send("no order details found");
+      return res.status(400).send({message : "no order status details found"});
     }
   } catch (err) {
     console.log("error-->", err);
-    res.status(400).send(err);
+    return res.status(400).send(err);
   }
 };
 
@@ -375,10 +411,10 @@ leaseController.get_accountblc = async (req, res) => {
       respobj.userblc_leased_out = vaccount_blc.row.balance;
       respobj.userblc_staked = vaccount_blc.row.total_leaseout_amount;
     } else respobj.user_leased_out = "0.0000 EOS";
-    res.status(200).send(respobj);
+    return res.status(200).send(respobj);
   } catch (err) {
     console.log("error-->", err);
-    res.status(400).send(err);
+    return res.status(400).send(err);
   }
 };
 

@@ -48,9 +48,16 @@ public:
     EOSLIB_SERIALIZE(login_struct, (username)(balance)(lease_period)(vote_choice))
   };
 
+  struct unreg_struct
+  {
+    name username;
+
+    EOSLIB_SERIALIZE(unreg_struct, (username))
+  };
+
   [[eosio::action]] void registeracc(login_struct payload);
   [[eosio::action]] void checkorder(name vaccount, uint64_t id, uint64_t orderstat_id);
-  [[eosio::action]] void withdraw(name vaccount);
+  [[eosio::action]] void withdraw(unreg_struct payload);
   [[eosio::action]] void leaseunstake(uint64_t orderid);
   [[eosio::action]] void addproxy(name account_name, std::string desc);
   [[eosio::action]] void addexchange(name account);
@@ -99,13 +106,24 @@ public:
     name vote_choice;
     time_point_sec last_lease_out;
     asset total_leaseout_amount;
+    asset total_reward_amount;
     bool initial_transfer = false;
 
     uint64_t primary_key() const { return username.value; }
   };
 
-  typedef dapp::multi_index<"lenderinfo1"_n, lender> lender_tab;
-  typedef eosio::multi_index<".lenderinfo1"_n, lender> lender_tab_v_abi;
+  typedef dapp::multi_index<"lenderinfo2"_n, lender> lender_tab;
+  typedef eosio::multi_index<".lenderinfo2"_n, lender> lender_tab_v_abi;
+
+  TABLE lender_history
+  {
+    name username;
+    asset balance;
+    uint64_t primary_key() const { return username.value; }
+  };
+
+  typedef dapp::multi_index<"lenderrec"_n, lender_history> lender_history_tab;
+  typedef eosio::multi_index<".lenderrec"_n, lender_history> lender_history_tab_v_abi;
 
   TABLE proxylist
   {
@@ -125,10 +143,10 @@ public:
     uint64_t primary_key() const { return shard; }
   };
 
-  typedef eosio::multi_index<"lenderinfo1"_n, shardbucket> lender_tab_abi;
+  typedef eosio::multi_index<"lenderinfo2"_n, shardbucket> lender_tab_abi;
   typedef eosio::multi_index<"ordersinfo1"_n, shardbucket> orders_tab_abi;
   typedef eosio::multi_index<"orderstat1"_n, shardbucket> lease_status_tab_abi;
-  //typedef eosio::multi_index<"borrowerblc"_n, shardbucket> borrowerdepo_tab_abi;
+  typedef eosio::multi_index<"lenderrec"_n, shardbucket> lender_history_tab_abi;
 
   vector<string>
   split(const string &str, const string &delim)
@@ -164,6 +182,6 @@ public:
   typedef eosio::singleton<"exchange"_n, exchange> exchange_tab;
   typedef eosio::multi_index<"exchange"_n, exchange> exchange_dummy_abi;
 
-  VACCOUNTS_APPLY(((login_struct)(registeracc)))
+  VACCOUNTS_APPLY(((login_struct)(registeracc))((unreg_struct)(withdraw)))
 };
 //CONTRACT_END((registeracc)(regaccount)(xdcommit)(xvinit))

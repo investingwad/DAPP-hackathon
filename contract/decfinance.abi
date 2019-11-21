@@ -198,8 +198,26 @@
                     "type": "asset"
                 },
                 {
+                    "name": "total_reward_amount",
+                    "type": "asset"
+                },
+                {
                     "name": "initial_transfer",
                     "type": "bool"
+                }
+            ]
+        },
+        {
+            "name": "lender_history",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                },
+                {
+                    "name": "balance",
+                    "type": "asset"
                 }
             ]
         },
@@ -346,6 +364,16 @@
             ]
         },
         {
+            "name": "unreg_struct",
+            "base": "",
+            "fields": [
+                {
+                    "name": "username",
+                    "type": "name"
+                }
+            ]
+        },
+        {
             "name": "vchain",
             "base": "",
             "fields": [
@@ -378,8 +406,8 @@
             "base": "",
             "fields": [
                 {
-                    "name": "vaccount",
-                    "type": "name"
+                    "name": "payload",
+                    "type": "unreg_struct"
                 }
             ]
         },
@@ -610,8 +638,15 @@
     ],
     "tables": [
         {
-            "name": ".lenderinfo1",
+            "name": ".lenderinfo2",
             "type": "lender",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": ".lenderrec",
+            "type": "lender_history",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
@@ -652,7 +687,14 @@
             "key_types": []
         },
         {
-            "name": "lenderinfo1",
+            "name": "lenderinfo2",
+            "type": "shardbucket",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "lenderrec",
             "type": "shardbucket",
             "index_type": "i64",
             "key_names": [],

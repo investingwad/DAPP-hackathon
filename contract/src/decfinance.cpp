@@ -15,6 +15,7 @@ void decfinance::registeracc(login_struct payload)
     e.max_lease_period = payload.lease_period;
     e.vote_choice = payload.vote_choice;
     e.total_leaseout_amount.symbol = payload.balance.symbol;
+    e.total_reward_amount.symbol = payload.balance.symbol;
   });
 }
 
@@ -199,18 +200,36 @@ void decfinance::checkorder(name vaccount, uint64_t id, uint64_t orderstat_id)
   matchorder(vaccount, id, orderstat_id);
 }
 
-void decfinance::withdraw(name vaccount)
+void decfinance::withdraw(unreg_struct payload)
 {
-  require_auth(_self);
+  //require_auth(_self);
+  require_vaccount(payload.username);
   lender_tab lender(_self, _self.value);
-  auto itr = lender.find(vaccount.value);
+  lender_history_tab lenderhistory(_self, _self.value);
+  auto itr = lender.find(payload.username.value);
   check(itr != lender.end(), "vaccount not found");
   check(itr->total_leaseout_amount.amount == 0, "can not withdraw. amount leased out");
+  asset amount_to_transfer = itr->balance + itr->total_reward_amount;
+  auto lender_h_itr = lenderhistory.find(payload.username.value);
+  if (lender_h_itr == lenderhistory.end())
+  {
+    lenderhistory.emplace(_self, [&](auto &e) {
+      e.username = payload.username;
+      e.balance = itr->balance + itr->total_reward_amount;
+    });
+  }
+  else
+  {
+
+    lenderhistory.modify(lender_h_itr, get_self(), [&](auto &e) {
+      e.balance += itr->balance + itr->total_reward_amount;
+    });
+  }
   lender.erase(itr);
   action(
       permission_level{itr->vote_choice, "active"_n},
       "eosio.token"_n, "transfer"_n,
-      std::make_tuple(itr->vote_choice, "coldwallet12"_n, itr->balance, std::string("transfer to exchange ")))
+      std::make_tuple(itr->vote_choice, "coldwallet12"_n, amount_to_transfer, std::string("transfer to exchange ")))
       .send();
 }
 
@@ -273,8 +292,9 @@ void decfinance::leaseunstake(uint64_t orderid)
   orders.erase(order);
 
   lender.modify(itr, get_self(), [&](auto &e) {
-    e.balance += order_itr->rent_amount + order_itr->rent_fee;
+    e.balance += order_itr->rent_amount;
     e.total_leaseout_amount -= order_itr->rent_amount;
+    e.total_reward_amount += order_itr->rent_fee;
   });
 }
 
