@@ -26,6 +26,9 @@ leaseController.create = (req, res) => {
 };
 
 leaseController.register_user = async (req, res) => {
+  if (!req.body.lease_amount || !req.body.lease_period || !req.body.vote_choice || !req.body.account_name){
+    res.status(400).send({ message: "Missing required body parameter" });
+  }
   try {
     let client = await createClient({
       network: "kylin",
@@ -38,7 +41,7 @@ leaseController.register_user = async (req, res) => {
       process.env.contract_key,
       "regaccount",
       {
-        vaccount: process.env.user1 // increment to new account if fails
+        vaccount: req.body.account_name //process.env.user1 // increment to new account if fails
       }
     );
     console.log("response_reg", response_reg);
@@ -48,7 +51,7 @@ leaseController.register_user = async (req, res) => {
       process.env.contract_key,
       "registeracc",
       {
-        username: process.env.user1,
+        username: req.body.account_name, //process.env.user1,
         balance: req.body.lease_amount,
         lease_period: req.body.lease_period,
         vote_choice: req.body.vote_choice
@@ -58,12 +61,24 @@ leaseController.register_user = async (req, res) => {
     res.status(200).send({ message: "Successful" });
     // lease_transfer(req.body.lease_amount);
   } catch (err) {
-    console.log("error-->", err);
-    res.status(400).send(err);
+    console.log("s.m. err--", err);
+    let msg = err.toString().split(":");
+    if (msg) {
+      let errmsg = msg[msg.length - 1];
+      res.status(400).send({ message: errmsg });
+    } else {
+      res.status(400).send({ message: "Error while transferring" });
+    }
   }
 };
 
 leaseController.create_order = async (req, res) => {
+  console.log("data",req.body.authorizer)
+  console.log("data",req.body.stake_to)
+  console.log("data",req.body.rent_amount)
+  console.log("data",req.body.rent_offer)
+  console.log("data",req.body.duration)
+  console.log("data",req.body.resource_type)
   try {
     let orderid = await eosaction.getid();
     console.log("oreid received ==", orderid);
@@ -101,8 +116,14 @@ leaseController.create_order = async (req, res) => {
     console.log("orderobj", orderobj);
     res.status(200).send({ message: orderobj });
   } catch (err) {
-    console.log("error-->", err);
-    res.status(400).send(err);
+    console.log("s.m. err--", err);
+    let msg = err.toString().split(":");
+    if (msg) {
+      let errmsg = msg[msg.length - 1];
+      res.status(400).send({ message: errmsg });
+    } else {
+      res.status(400).send({ message: "Error while transferring" });
+    }
   }
 };
 
@@ -233,11 +254,15 @@ leaseController.withdraw = async (req, res) => {
       process.env.contract,
     );
     console.log("result", result);
-    let updateexchange = await eosaction.updateexchange(
-      req.body.account_name,
-      req.body.amount,
-      "withdraw"
-    );
+    let vaccount_blc = await eosaction.getvaccountdet(req.body.account_name);
+    if (vaccount_blc.row) {
+       let updateexchange = await eosaction.updateexchange(    
+        req.body.account_name,
+        vaccount_blc.row.balance,
+        "withdraw"
+      );
+    }
+   
     res.status(200).send({message : "Successfully withdrawn lease-out request"});
   } catch (err) {
     console.log("s.m. err--", err);
