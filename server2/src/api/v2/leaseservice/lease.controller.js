@@ -71,7 +71,7 @@ leaseController.register_user = async (req, res) => {
       prv_key,
       'registeracc',
       {
-        username: req.body.account_name, // process.env.user1,
+        vaccount: req.body.account_name, // process.env.user1,
         balance: req.body.lease_amount,
         lease_period: req.body.lease_period,
         vote_choice: req.body.vote_choice
@@ -83,7 +83,7 @@ leaseController.register_user = async (req, res) => {
     //   prv_key,
     //   'testvacc',
     //   {
-    //     username: req.body.account_name // process.env.user1,
+    //     vaccount: req.body.account_name // process.env.user1,
     //   }
     // )
     // console.log('response_registeraction', response_withdraw)
@@ -290,46 +290,46 @@ leaseController.withdraw = async (req, res) => {
     return res.status(400).send({ message: 'Missing required body parameter' })
   }
   try {
-    let data = {
-      vaccount: req.body.account_name
-    }
-    const result = await eosaction.pushtrx(
-      'withdraw',
-      data,
-      process.env.contract,
-      process.env.contract
-    )
-    console.log('result', result)
-    return res
-        .status(200)
-         .send({ message: 'Successfully withdrawn lease-out request' })
-    // let client = await createClient({
-    //   network: 'kylin',
-    //   httpEndpoint: dspEndpt,
-    //   fetch: fetch
-    // })
-    // const service = await client.service('vaccounts', process.env.contract)
-
-    // let userkeys = await Userkey.findOne({ user: req.body.account_name })
-    // console.log(userkeys)
-    // if (userkeys != null) {
-    //   const response_registeraction = await service.push_liquid_account_transaction(
-    //     process.env.contract,
-    //     userkeys.private,
-    //     'withdraw',
-    //     {
-    //       username: req.body.account_name // process.env.user1,
-    //     }
-    //   )
-    //   console.log('response_registeraction', response_registeraction)
-    //   return res
-    //     .status(200)
-    //     .send({ message: 'Successfully withdrawn lease-out request' })
-    // } else {
-    //   return res
-    //     .status(400)
-    //     .send({ message: 'No private key found for this vaccount' })
+    // let data = {
+    //   vaccount: req.body.account_name
     // }
+    // const result = await eosaction.pushtrx(
+    //   'withdraw',
+    //   data,
+    //   process.env.contract,
+    //   process.env.contract
+    // )
+    // console.log('result', result)
+    // return res
+    //     .status(200)
+    //      .send({ message: 'Successfully withdrawn lease-out request' })
+    let client = await createClient({
+      network: 'kylin',
+      httpEndpoint: dspEndpt,
+      fetch: fetch
+    })
+    const service = await client.service('vaccounts', process.env.contract)
+
+    let userkeys = await Userkey.findOne({ user: req.body.account_name })
+    console.log(userkeys)
+    if (userkeys != null) {
+      const response_registeraction = await service.push_liquid_account_transaction(
+        process.env.contract,
+        userkeys.private,
+        'withdraw',
+        {
+          vaccount: req.body.account_name // process.env.user1,
+        }
+      )
+      console.log('response_registeraction', response_registeraction)
+      return res
+        .status(200)
+        .send({ message: 'Successfully withdrawn lease-out request' })
+    } else {
+      return res
+        .status(400)
+        .send({ message: 'No private key found for this vaccount' })
+    }
   } catch (err) {
     console.log('s.m. err--', err)
     let msg = err.toString().split(':')
@@ -337,7 +337,7 @@ leaseController.withdraw = async (req, res) => {
       let errmsg = msg[msg.length - 1]
       return res.status(400).send({ message: errmsg })
     } else {
-      return res.status(400).send({ message: 'Error while transferring' })
+      return res.status(400).send({ message: 'Error in withdraw' })
     }
   }
 }

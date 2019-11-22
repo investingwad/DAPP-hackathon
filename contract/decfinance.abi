@@ -226,7 +226,7 @@
             "base": "",
             "fields": [
                 {
-                    "name": "username",
+                    "name": "vaccount",
                     "type": "name"
                 },
                 {
@@ -368,7 +368,7 @@
             "base": "",
             "fields": [
                 {
-                    "name": "username",
+                    "name": "vaccount",
                     "type": "name"
                 }
             ]
@@ -416,8 +416,8 @@
             "base": "",
             "fields": [
                 {
-                    "name": "vaccount",
-                    "type": "name"
+                    "name": "payload",
+                    "type": "test_struct"
                 }
             ]
         },
