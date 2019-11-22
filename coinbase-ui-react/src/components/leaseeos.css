@@ -1,0 +1,47 @@
+.lease_button {
+  width: 125px;
+  background-color: #2196f3;
+  color: white;
+  padding: 10px;
+}
+.lease_button:hover {
+  width: 125px;
+  background-color: #d7e3ec;
+  color: black;
+  padding: 10px;
+}
+
+.withdraw_button {
+  width: 125px;
+  background-color: #db3c3c;
+  padding: 10px;
+  color: white;
+}
+.withdraw_button:hover {
+  width: 125px;
+  background-color: #ee9b9b;
+  padding: 10px;
+  color: white;
+}
+
+.disabled_button {
+  width: 125px;
+  background-color: #535050;
+  padding: 10px;
+  color: white;
+}
+
+.leaseeos {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin: 10px auto 15px;
+}
+.leaseeos h3 {
+  color: #171717;
+}
+.leaseeos .form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
