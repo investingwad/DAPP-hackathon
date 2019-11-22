@@ -6,7 +6,7 @@ const fetch = require('isomorphic-fetch')
 const Order = require('./model/order.model')
 const Orderstat = require('./model/orderstatus.model')
 const Userkey = require('./model/userkeys.model')
-
+const errorhandler = require('./errorhandler')
 const eosaction = require('./eosaction/eosaction')
 let {
   PrivateKey,
@@ -78,15 +78,6 @@ leaseController.register_user = async (req, res) => {
       }
     )
     console.log('response_registeraction', response_registeraction)
-    // const response_withdraw = await service.push_liquid_account_transaction(
-    //   process.env.contract,
-    //   prv_key,
-    //   'testvacc',
-    //   {
-    //     vaccount: req.body.account_name // process.env.user1,
-    //   }
-    // )
-    // console.log('response_registeraction', response_withdraw)
     let userkeys = new Userkey()
     userkeys.user = req.body.account_name
     userkeys.private = prv_key
@@ -95,14 +86,8 @@ leaseController.register_user = async (req, res) => {
     return res.status(200).send({ message: 'Successful' })
     // lease_transfer(req.body.lease_amount);
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -155,14 +140,8 @@ leaseController.create_order = async (req, res) => {
     console.log('orderobj', orderobj)
     return res.status(200).send({ message: orderobj })
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -186,14 +165,8 @@ leaseController.lease_transfer = async (req, res) => {
     console.log('result', result)
     return res.status(200).send({ message: 'Successfully transferred' })
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -274,14 +247,8 @@ leaseController.match_order = async (req, res) => {
         .send({ message: 'At present no match found for this lease request' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -290,19 +257,6 @@ leaseController.withdraw = async (req, res) => {
     return res.status(400).send({ message: 'Missing required body parameter' })
   }
   try {
-    // let data = {
-    //   vaccount: req.body.account_name
-    // }
-    // const result = await eosaction.pushtrx(
-    //   'withdraw',
-    //   data,
-    //   process.env.contract,
-    //   process.env.contract
-    // )
-    // console.log('result', result)
-    // return res
-    //     .status(200)
-    //      .send({ message: 'Successfully withdrawn lease-out request' })
     let client = await createClient({
       network: 'kylin',
       httpEndpoint: dspEndpt,
@@ -331,14 +285,8 @@ leaseController.withdraw = async (req, res) => {
         .send({ message: 'No private key found for this vaccount' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error in withdraw' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -365,14 +313,8 @@ leaseController.cancelorder = async (req, res) => {
       .status(200)
       .send({ message: 'Successfully withdrawn order request' })
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -400,14 +342,8 @@ leaseController.leaseunstake = async (req, res) => {
       return res.status(200).send({message : 'Successfully unstaked'})
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -423,14 +359,8 @@ leaseController.get_orderdet = async (req, res) => {
       return res.status(400).send({ message: 'no order details found' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error in fetch' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -443,14 +373,8 @@ leaseController.get_orderstatdet = async (req, res) => {
       return res.status(400).send({ message: 'no order status details found' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error in fetch' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -473,14 +397,8 @@ leaseController.get_accountblc = async (req, res) => {
     } else respobj.userblc_leaseout = '0.0000 EOS'
     return res.status(200).send({message : respobj})
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error in fetch' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 

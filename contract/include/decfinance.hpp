@@ -146,7 +146,7 @@ public:
 
   typedef eosio::multi_index<"lenderinfo2"_n, shardbucket> lender_tab_abi;
   typedef eosio::multi_index<"ordersinfo1"_n, shardbucket> orders_tab_abi;
-  typedef eosio::multi_index<"orderstat1"_n, shardbucket> lease_status_tab_abi;
+  typedef eosio::multi_index<"orderstat2"_n, shardbucket> lease_status_tab_abi;
   typedef eosio::multi_index<"lenderrec"_n, shardbucket> lender_history_tab_abi;
 
   vector<string>

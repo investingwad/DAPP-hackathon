@@ -724,6 +724,13 @@
         },
         {
             "name": "orderstat1",
+            "type": "lease_status",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "orderstat2",
             "type": "shardbucket",
             "index_type": "i64",
             "key_names": [],
