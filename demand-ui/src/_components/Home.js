@@ -14,6 +14,7 @@ import OrdersTable from "./OrdersTable";
 import "../global.scss";
 import Navbar from "./Navbar/Navbar";
 import axios from "axios";
+import { mid } from "../_helpers/Images";
 
 const endpoint = "https://api.kylin.alohaeos.com";
 let data = [];
@@ -39,9 +40,21 @@ class Home extends Component {
       loggedIn: false,
       contractAccount: "leaseconacc1",
       connected: false,
-      resource_needed: ""
+      resource_needed: "",
+      userBalance: null
     };
+  }
 
+  componentDidMount() {
+    this.getUserBalance();
+  }
+  compo
+
+  connect = async () => {
+    const { user } = this.state;
+    const requiredFields = {
+      accounts: [kylinN]
+    };
     try {
       ScatterJS.scatter.connect("hack").then(connected => {
         // User does not have Scatter Desktop, Mobile or Classic installed.
@@ -52,43 +65,38 @@ class Home extends Component {
         const requiredFields = {
           accounts: [kylinN]
         };
+        ScatterJS.scatter.getIdentity(requiredFields).then(() => {
+          // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
+          // the user for their account name beforehand. They could still give you a different account.
+
+          console.log("acc", ScatterJS.scatter.identity.accounts);
+
+          this.account = ScatterJS.scatter.identity.accounts.find(
+            x => x.blockchain === "eos"
+          );
+          localStorage.setItem("user", this.account);
+          const user1 = localStorage.getItem("user");
+          console.log("hey-->", user1.name);
+
+          this.setState({ loggedIn: true, connected: true });
+          this.setState({
+            user: {
+              ...user,
+              name: this.account.name,
+              publicKey: this.account.publicKey
+            }
+          });
+
+          // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
+          const rpc = new JsonRpc(endpoint);
+          this.eos = ScatterJS.eos(kylinN, Api, { rpc, beta3: true });
+        });
 
         window.ScatterJS = null;
       });
     } catch (error) {
       console.log(error);
     }
-  }
-
-  connect = async () => {
-    const { user } = this.state;
-    const result = await ScatterJS.scatter
-      .getIdentity(requiredFields)
-      .then(() => {
-        // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
-        // the user for their account name beforehand. They could still give you a different account.
-
-        console.log("acc", ScatterJS.scatter.identity.accounts);
-
-        this.account = ScatterJS.scatter.identity.accounts.find(
-          x => x.blockchain === "eos"
-        );
-
-        this.setState({ loggedIn: true, connected: true });
-        this.setState({
-          user: {
-            ...user,
-            name: this.account.name,
-            publicKey: this.account.publicKey
-          }
-        });
-
-        // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
-        const rpc = new JsonRpc(endpoint);
-        this.eos = ScatterJS.eos(kylinN, Api, { rpc, beta3: true });
-      });
-
-    window.ScatterJS = null;
   };
 
   transfer = async (action, data) => {
@@ -126,6 +134,20 @@ class Home extends Component {
       : null;
   };
 
+  getUserBalance = async () => {
+    // e.preventDefault()
+    console.log("here");
+
+    const rpc = new JsonRpc(endpoint);
+    const bal = await rpc
+      .get_currency_balance("eosio.token", this.state.user.name, "EOS")
+      .then(res => {
+        if (res[0] !== "") {
+          this.setState({ userBalance: res[0] });
+        }
+      });
+  };
+
   handleSubmit = async e => {
     e.preventDefault();
     const { bandwidth, duration, offer, staketo } = this.state.order;
@@ -140,9 +162,6 @@ class Home extends Component {
       resource_type: resource_needed
     };
 
-    console.log("memo--->", resource_needed);
-    console.log("data--->", data);
-
     this.transfer("transfer", {
       from: this.account.name,
       to: "leaseconacc1",
@@ -150,10 +169,8 @@ class Home extends Component {
       memo: memo
     }).then(async res => {
       if (res.transaction_id !== "") {
-        console.log("hetre");
-
         await axios
-          .post(process.env.REACT_APP_API, data)
+          .post("http://dappapi.zero2pi.com/api/v1/create_order", data)
           .then(res => console.log("res---->", res));
       }
     });
@@ -176,22 +193,11 @@ class Home extends Component {
       this.setState({
         resource_needed: "cpu"
       });
-      return <div></div>;
     } else {
       this.setState({
         resource_needed: "net"
       });
     }
-  };
-
-  handleWithdraw = async id => {
-    const result = await axios
-      .post(process.env.REACT_APP_WITHDRAW_API, { order_id: id })
-      .then(res => {
-        console.log("response--->", res);
-
-        // alert("Your order has been withdrawn!!")
-      });
   };
 
   logout = async () => {
@@ -202,125 +208,154 @@ class Home extends Component {
   render() {
     const { staketo, duration, offer, bandwidth } = this.state.order;
     const User = this.state.user;
-    console.log("funk---->");
-
     return this.state.loggedIn ? (
-      <div className="container-fluid">
-        <div className="row-nav">
+      <div className="main-wrapper">
+        <div>
           <Navbar
             login={this.connect}
             logout={this.logout}
             loggedIn={this.state.loggedIn}
           />
         </div>
-        <div className="row-info">
-          <div className="col-lg">
-            User information
-            <br />
-            <span>Account name: {User.name}</span>
-          </div>
-          <div className="col-lg">
-            balance: <Balance name={this.state.user.name} />
-          </div>
-        </div>
-        <div className="row-order">
-          <form>
-            <label>Stake to:</label>
-            <input
-              type="text"
-              name="staketo"
-              placeholder="0.0000 EOS"
-              value={staketo}
-              onChange={this.handleChange}
-            />
-            <br />
-            <div className="row-action">
-              <span>Choose the Resource you would like to order:</span>
-              <DropdownButton
-                id="dropdown-item-button"
-                title="Actions"
-                className="dd-button"
-              >
-                <Dropdown.Item
-                  as="button"
-                  value="cpu"
-                  onClick={this.handleDrop}
-                >
-                  CPU
-                </Dropdown.Item>
-                <Dropdown.Item
-                  as="button"
-                  value="net"
-                  onClick={this.handleDrop}
-                >
-                  NET
-                </Dropdown.Item>
-              </DropdownButton>
-            </div>
-            {this.state.resource_needed && (
-              <div>
-                <label>
-                  {this.state.resource_needed.toUpperCase()} Bandwidth:
-                </label>
-                <input
-                  type="text"
-                  name="bandwidth"
-                  placeholder="0.0000 EOS"
-                  value={bandwidth}
-                  onChange={this.handleChange}
-                />
+        <div className="content-wrapper">
+          <div className="row">
+            <div className="col-lg">
+              <div className="card custom-card">
+                <span className="main-heading">User information</span>
+                <span>Account name: {User.name}</span>
+                <br />
+                <div>Create your order:</div>
+                <br />
+                <div>
+                  <form>
+                    <label>Stake to:</label>
+                    <input
+                      type="text"
+                      name="staketo"
+                      placeholder="Name..."
+                      value={staketo}
+                      onChange={this.handleChange}
+                      className="in"
+                    />
+                    <br />
+                    <br />
+                    <div className="row action">
+                      <span style={{ marginLeft: "15px" }}>
+                        Choose the Resource you would like to order:
+                      </span>
+                      <DropdownButton
+                        id="dropdown-item-button"
+                        title="Actions"
+                        className="dd-button"
+                      >
+                        <Dropdown.Item
+                          as="button"
+                          value="cpu"
+                          onClick={this.handleDrop}
+                        >
+                          CPU
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          as="button"
+                          value="net"
+                          onClick={this.handleDrop}
+                        >
+                          NET
+                        </Dropdown.Item>
+                      </DropdownButton>
+                    </div>
+                    {this.state.resource_needed && (
+                      <div>
+                        <label>
+                          {this.state.resource_needed.toUpperCase()} Bandwidth:
+                        </label>
+                        <input
+                          type="text"
+                          name="bandwidth"
+                          placeholder="0.0000 EOS"
+                          value={bandwidth}
+                          onChange={this.handleChange}
+                          className="in"
+                        />
+                        <br />
+                        <br />
+                      </div>
+                    )}
+                    <label>Duration of lease:</label>
+                    <input
+                      type="number"
+                      name="duration"
+                      placeholder="0 days"
+                      value={duration}
+                      onChange={this.handleChange}
+                      className="in"
+                    />
+                    <br />
+                    <br />
+                    <label>Offer of rent:</label>
+                    <input
+                      type="text"
+                      name="offer"
+                      placeholder="0.0000 EOS"
+                      value={offer}
+                      onChange={this.handleChange}
+                      className="in"
+                    />{" "}
+                    <br />
+                    <br />
+                    <button
+                      className="btn btn-success submit"
+                      onClick={this.handleSubmit}
+                    >
+                      Submit
+                    </button>
+                  </form>
+                </div>
               </div>
-            )}
-            <label>Duration of lease:</label>
-            <input
-              type="number"
-              name="duration"
-              placeholder="0"
-              value={duration}
-              onChange={this.handleChange}
-            />{" "}
-            days <br />
-            <label>Offer of rent:</label>
-            <input
-              type="text"
-              name="offer"
-              placeholder="0.0000 EOS"
-              value={offer}
-              onChange={this.handleChange}
-            />{" "}
-            <br />
-            <button className="btn btn-success" onClick={this.handleSubmit}>
-              Submit
-            </button>
-          </form>
-        </div>
+            </div>
 
-        <div className="row-table">
-          <OrdersTable username={User.name} />
+            <div className="col-lg">
+              <div className="card custom-card">
+                <div className="balance">
+                  <div>
+                    User Wallet balance:
+                    {!this.state.userBalance ? (
+                      <button
+                        className="btn btn-primary"
+                        onClick={this.getUserBalance}
+                      >
+                        Check Balance
+                      </button>
+                    ) : (
+                      <span>{this.state.userBalance}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="wrap-tables">
+            <div className="row">Your Orders:</div>
+            <div className="row order">
+              <OrdersTable />
+            </div>
+          </div>
         </div>
       </div>
     ) : (
-      <div className="container-fluid">
-        <div className="row">
+      <div className="main-wrapper">
+        <div>
           <Navbar
             login={this.connect}
             logout={this.logout}
             loggedIn={this.state.loggedIn}
           />
         </div>
+        <div className="backgr"></div>
       </div>
     );
   }
-}
-
-function Balance(props) {
-  const rpc = new JsonRpc(endpoint);
-  const balance = async () =>
-    await rpc.get_currency_balance("eosio.token", props.name, "EOS");
-
-  const newBalance = balance.toString();
-
-  return <div>{data}</div>;
 }
 
 export default Home;

@@ -1,9 +1,19 @@
-html {
+html,
+body {
+  height: 100%;
   padding: 20px;
+  margin: 0;
+  padding: 0;
+  font-family: "Dosis", sans-serif;
+}
+
+input {
+  width: 100%;
 }
 
 .container-fluid {
   height: 100vh;
+  margin: 0 auto;
 }
 
 .Wrapper {
@@ -18,17 +28,18 @@ html {
   right: 0px;
   box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.1);
   padding-bottom: 20px;
-  background-color: white;
+  background-color: rgb(255, 255, 255);
   flex-wrap: nowrap;
   margin: 1px;
 }
 
 .Panel {
   display: flex;
-  justify-content: flex-center;
+  justify-content: space-between;
   height: 20px;
   width: 100%;
   margin-top: 1%;
+  margin-right: 1%;
   align-items: center;
   color: black;
 }
@@ -36,7 +47,6 @@ html {
 .Button {
   display: inline;
   color: white;
-  margin: 0 10px 0 0;
   font-family: Lato;
   font-size: 16px;
   font-weight: 400;
@@ -48,20 +58,113 @@ html {
   border: 1px solid white;
 }
 
-.row-nav {
-    margin-bottom: 3%;
+.nav {
+  margin-bottom: 3%;
 }
 
-.row-info {
-    margin-bottom: 5%;
-
+.backgr {
+  background: url("./images/back.jpg") no-repeat;
+  background-size: cover;
+  background-position: center;
+  height: 100vh;
 }
 
-.row-order {
-    margin-bottom: 5%;
-
+.bal {
+  margin-top: 5%;
+  margin-bottom: 2%;
+  padding-bottom: 2%;
+  border-bottom: 1px solid black;
+  display: flex;
+  justify-content: space-around;
 }
 
-.row-action {
+.dd-button {
+  position: relative;
+  bottom: 5.5px;
+  margin: 0 0 0 1%;
+}
 
+.left {
+  border: 1px solid rgb(133, 133, 133);
+  margin: 0 2% 0 0;
+  box-shadow: 3px 6px rgb(133, 133, 133);
+}
+
+.right {
+  border: 1px solid rgb(133, 133, 133);
+  box-shadow: 3px 6px rgb(133, 133, 133);
+}
+.logo {
+  padding: 10%;
+  width: 10%;
+}
+
+.logotxt {
+  color: black;
+  max-height: 100%;
+  font-weight: bold;
+  font-size: x-large;
+  font-stretch: expanded;
+  margin-left: 20%;
+}
+.balance {
+  margin-top: 3%;
+}
+.order {
+  margin-top: 2%;
+  width: 100%;
+}
+
+.table {
+  table-layout: auto;
+  width: 400px;
+}
+
+.main-wrapper {
+  max-width: 100%;
+  margin: auto;
+}
+.custom-navbar {
+  padding: 20px 50px;
+  border-bottom: 1px solid #dbdbdb;
+  color: black;
+  font-size: 30px;
+  position: fixed;
+  width: 100%;
+  background: #e3eff1;
+  z-index: 1000000;
+  max-width: 100%;
+  display: flex;
+  justify-content: space-between;
+  top: 0;
+  height: 85px;
+}
+.content-wrapper {
+  background: #e3e5e6;
+  margin-top: 85px;
+  padding: 50px 20px;
+}
+.custom-card {
+  padding: 20px;
+}
+.custom-card input {
+  padding: 5px 10px;
+  border: 1px solid #dbdbdb;
+  color: gray;
+  border-radius: 3px;
+  font-size: 14px;
+}
+.wrap-tables {
+  padding: 50px 20px;
+}
+.table-responsive {
+  display: inline-table !important;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.main-heading {
+  font-size: 24px;
+  color: #333333;
+  font-weight: 900;
 }
