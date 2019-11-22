@@ -266,7 +266,7 @@ leaseController.match_order = async (req, res) => {
       orderstat.filled_at = new Date().toISOString().split('.')[0]
 
       let ordderstatres = await orderstat.save()
-      return res.status(200).send(ordderstatres)
+      return res.status(200).send({message : ordderstatres})
       // }
     } else {
       return res
@@ -397,7 +397,7 @@ leaseController.leaseunstake = async (req, res) => {
         .remove()
         .exec()
       await order.remove()
-      return res.status(200).send('Successfully unstaked')
+      return res.status(200).send({message : 'Successfully unstaked'})
     }
   } catch (err) {
     console.log('s.m. err--', err)
@@ -413,12 +413,12 @@ leaseController.leaseunstake = async (req, res) => {
 
 leaseController.get_orderdet = async (req, res) => {
   if (!req.params.authorizer) {
-    return res.status(400).send({ message: 'Missing required body parameter' })
+    return res.status(400).send({ message: 'Missing required parameter' })
   }
   try {
     let order = await Order.find({ authorizer: req.params.authorizer })
     if (order) {
-      return res.status(200).send(order)
+      return res.status(200).send({message : order})
     } else {
       return res.status(400).send({ message: 'no order details found' })
     }
@@ -438,7 +438,7 @@ leaseController.get_orderstatdet = async (req, res) => {
   try {
     let orderstat = await Orderstat.find({})
     if (orderstat) {
-      return res.status(200).send(orderstat)
+      return res.status(200).send({message : orderstat})
     } else {
       return res.status(400).send({ message: 'no order status details found' })
     }
@@ -455,6 +455,9 @@ leaseController.get_orderstatdet = async (req, res) => {
 }
 
 leaseController.get_accountblc = async (req, res) => {
+  if (!req.params.vaccount) {
+    return res.status(400).send({ message: 'Missing required parameter' })
+  }
   try {
     let vaccount_blc = await eosaction.getvaccountdet(req.params.vaccount)
     let vaccount_history = await eosaction.getvaccounthistory(
@@ -466,9 +469,9 @@ leaseController.get_accountblc = async (req, res) => {
       respobj.userblc_totalstaked = vaccount_blc.row.total_leaseout_amount
       respobj.userblc_totalreward = vaccount_blc.row.total_reward_amount
     } else if (vaccount_history.row) {
-      respobj.userblc_leaseout = vaccount_history.row.balance
-    } else respobj.user_leased_out = '0.0000 EOS'
-    return res.status(200).send(respobj)
+      respobj.userblc_leaseout_history = vaccount_history.row.balance
+    } else respobj.userblc_leaseout = '0.0000 EOS'
+    return res.status(200).send({message : respobj})
   } catch (err) {
     console.log('s.m. err--', err)
     let msg = err.toString().split(':')
