@@ -8,28 +8,6 @@ export default function Navbar(props) {
   console.log("props--->", props.loggedIn);
 
   return (
-    // <div className="Wrapper">
-    //   <div className="Panel">
-    //     <div>
-    //       <span className="logotxt">Coinbase</span>
-    //     </div>
-    //     {props.loggedIn ? (
-    //       <button
-    //         className="btn btn-primary btn-md active"
-    //         onClick={props.logout}
-    //       >
-    //         Logout with Scatter
-    //       </button>
-    //     ) : (
-    //       <button
-    //         className="btn btn-primary btn-md active"
-    //         onClick={props.login}
-    //       >
-    //         Login with Scatter
-    //       </button>
-    //     )}
-    //   </div>
-    // </div>
     <div>
       <div className="custom-navbar">
         <span>Coinbase</span>

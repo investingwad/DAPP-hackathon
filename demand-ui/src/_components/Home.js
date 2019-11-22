@@ -48,7 +48,6 @@ class Home extends Component {
   componentDidMount() {
     this.getUserBalance();
   }
-  compo
 
   connect = async () => {
     const { user } = this.state;
@@ -56,43 +55,46 @@ class Home extends Component {
       accounts: [kylinN]
     };
     try {
-      ScatterJS.scatter.connect("hack").then(connected => {
+      await ScatterJS.scatter.connect("hack").then(async connected => {
         // User does not have Scatter Desktop, Mobile or Classic installed.
-        if (!connected) return console.log("Issue Connecting");
+        if (!connected) {
+          return console.log("Issue Connecting!!");
+        } else {
+          this.setState({ connected: true });
+          console.log("stateset", this.state.connected);
+          const scatter = ScatterJS.scatter;
 
-        const scatter = ScatterJS.scatter;
+          const requiredFields = {
+            accounts: [kylinN]
+          };
+          await ScatterJS.scatter.getIdentity(requiredFields).then(() => {
+            // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
+            // the user for their account name beforehand. They could still give you a different account.
 
-        const requiredFields = {
-          accounts: [kylinN]
-        };
-        ScatterJS.scatter.getIdentity(requiredFields).then(() => {
-          // Always use the accounts you got back from Scatter. Never hardcode them even if you are prompting
-          // the user for their account name beforehand. They could still give you a different account.
+            this.account = ScatterJS.scatter.identity.accounts.find(
+              x => x.blockchain === "eos"
+            );
 
-          console.log("acc", ScatterJS.scatter.identity.accounts);
+            localStorage.setItem("user", this.account.name);
+            const user1 = localStorage.getItem("user");
+            console.log("hey-->", user1);
 
-          this.account = ScatterJS.scatter.identity.accounts.find(
-            x => x.blockchain === "eos"
-          );
-          localStorage.setItem("user", this.account);
-          const user1 = localStorage.getItem("user");
-          console.log("hey-->", user1.name);
+            this.setState({ loggedIn: true, connected: true });
+            this.setState({
+              user: {
+                ...user,
+                name: this.account.name,
+                publicKey: this.account.publicKey
+              }
+            });
 
-          this.setState({ loggedIn: true, connected: true });
-          this.setState({
-            user: {
-              ...user,
-              name: this.account.name,
-              publicKey: this.account.publicKey
-            }
+            // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
+            const rpc = new JsonRpc(endpoint);
+            this.eos = ScatterJS.eos(kylinN, Api, { rpc, beta3: true });
           });
 
-          // Get a proxy reference to eosjs which you can use to sign transactions with a user's Scatter.
-          const rpc = new JsonRpc(endpoint);
-          this.eos = ScatterJS.eos(kylinN, Api, { rpc, beta3: true });
-        });
-
-        window.ScatterJS = null;
+          window.ScatterJS = null;
+        }
       });
     } catch (error) {
       console.log(error);
@@ -171,7 +173,11 @@ class Home extends Component {
       if (res.transaction_id !== "") {
         await axios
           .post("http://dappapi.zero2pi.com/api/v1/create_order", data)
-          .then(res => console.log("res---->", res));
+          .then(res => {
+            if (res.data.message.authorizer !== "") {
+              alert("Your order has been succesfully created!!");
+            }
+          });
       }
     });
   };
@@ -321,13 +327,13 @@ class Home extends Component {
                     User Wallet balance:
                     {!this.state.userBalance ? (
                       <button
-                        className="btn btn-primary"
+                        className="btn btn-primary ubal"
                         onClick={this.getUserBalance}
                       >
                         Check Balance
                       </button>
                     ) : (
-                      <span>{this.state.userBalance}</span>
+                      <span> {this.state.userBalance}</span>
                     )}
                   </div>
                 </div>
@@ -335,7 +341,7 @@ class Home extends Component {
             </div>
           </div>
 
-          <div class="wrap-tables">
+          <div className="wrap-tables">
             <div className="row">Your Orders:</div>
             <div className="row order">
               <OrdersTable />

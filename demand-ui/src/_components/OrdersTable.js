@@ -15,7 +15,7 @@ function Table({ columns, data }) {
   });
 
   return (
-    <table className="table table-hover table-responsive"  {...getTableProps()}>
+    <table className="table table-hover table-responsive" {...getTableProps()}>
       <thead className="thead-dark">
         {headerGroups.map(headerGroup => (
           <tr {...headerGroup.getHeaderGroupProps()}>
@@ -43,8 +43,6 @@ function Table({ columns, data }) {
   );
 }
 const getDate = e => {
-  console.log("rowss---->", e);
-
   Date.prototype.addDays = function(days) {
     var date = new Date(this.valueOf());
     date.setDate(date.getDate() + days);
@@ -58,37 +56,25 @@ const getDate = e => {
 };
 
 const handleWithdraw = row => {
-  console.log("row--->", row.values.order_id);
   const API = "http://dappapi.zero2pi.com/api/v1/cancelorder";
   let data = {
     order_id: row.values.order_id
   };
-  console.log("id--->", data);
 
   const withdraw = async () => {
     await axios.post(API, data).then(res => console.log("res---->", res));
   };
-  // if(e.)
 
-  // if (row.values.status == "queue") {
   return (
     <button onClick={withdraw} className="btn btn-danger">
       Withdraw
     </button>
   );
-  // } else {
-  //   return <span>Cannot Withdraw</span>;
-  // }
 };
 
 export default function OrdersTable(props) {
   const user = localStorage.getItem("user");
-  console.log("user--->", user.name);
-
-  const table_api = `http://dappapi.zero2pi.com/api/v1/get_orderdet/kylinaccoun1`;
-  console.log("result---->", table_api);
-  console.log("props---->", props.username);
-  const [expired, setExpired] = useState(false);
+  const table_api = `http://dappapi.zero2pi.com/api/v1/get_orderdet/${user}`;
   const [data, setData] = useState([]);
   const columns = useMemo(() => [
     {
@@ -119,29 +105,30 @@ export default function OrdersTable(props) {
     {
       Header: "Actions",
       accessor: "authorizer",
-      Cell: ({ row }) => handleWithdraw(row)
+      Cell: ({ row }) =>
+        row.values.order_stat ? (
+          handleWithdraw(row)
+        ) : (
+          <span>Cannot Withdraw</span>
+        )
     }
   ]);
 
   const getTable = async () => {
-    const result = await axios.get(table_api).then(res => {
-      setData(res.data);
+    return await axios.get(table_api).then(res => {
+      setData(res.data.message);
     });
   };
 
   useEffect(() => {
     const user = localStorage.getItem("user");
-    console.log("use--->", user.name);
-
-    // if (user.username !== "") {
-    getTable();
-    // } else {
-    // alert("please login again!!");
-    //   }
+    if (user !== "") {
+      getTable();
+    }
   }, []);
 
   return (
-    <div style={{width:"100%"}}>
+    <div style={{ width: "100%" }}>
       <Table columns={columns} data={data} />
     </div>
   );
