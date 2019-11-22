@@ -1,0 +1,7 @@
+
+{
+	"port": 8082,
+	"bodyLimit": "100kb",
+	"corsHeaders": ["Link"]
+	
+}
