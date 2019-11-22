@@ -57,6 +57,10 @@ const getDate = e => {
   return newDate.toString().slice(0, 24);
 };
 
+const handleWithdraw = async id => {
+  return (<div><button className="btn btn-danger">Withdraw</button></div>)
+};
+
 export default function OrdersTable(props) {
   console.log("table->", <Table />);
 
@@ -93,15 +97,7 @@ export default function OrdersTable(props) {
     },
     {
       Header: "Actions",
-      Cell: ({ row }) => (
-        // console.log("cell--->", row)
-
-        <div>
-          <button onClick={props.withdraw} className="btn btn-danger">
-            Withdraw
-          </button>
-        </div>
-      )
+      Cell: ({ row }) => handleWithdraw()
     }
   ]);
 
@@ -121,5 +117,3 @@ export default function OrdersTable(props) {
     </div>
   );
 }
-
-
