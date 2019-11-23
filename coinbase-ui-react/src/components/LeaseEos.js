@@ -1,6 +1,8 @@
 import React, { Component } from "react";
 import axios from "axios";
 
+import Spinner from "../Spinner/Spinner";
+
 import "./leaseeos.css";
 
 class LeaseEos extends Component {
@@ -12,8 +14,8 @@ class LeaseEos extends Component {
       lease_amount: "10.0000 EOS",
       lease_period: "30",
       vote_choice: "leaseproxy22",
-      status: "Status",
-      isLeased: false
+      isLeased: false,
+      isLoading: false
     };
 
     this.leaseEos = this.leaseEos.bind(this);
@@ -50,12 +52,17 @@ class LeaseEos extends Component {
       .post(`http://dappapi.zero2pi.com/api/v1/withdraw`, {
         account_name: accountNameSelected
       })
-      .then(function(response) {
-        console.log(response);
+      .then(response => {
+        console.log(response.data);
       })
-      .catch(function(error) {
-        console.log(error);
+      .catch(e => {
+        // this.setState({
+        //   status: "Status : " + e.response.data.message
+        // });
+        console.log(e.response.data.message);
       });
+
+    // END
   }
 
   leaseEos() {
@@ -69,6 +76,10 @@ class LeaseEos extends Component {
     let leasePeriodSelected = this.state.lease_period.toString();
     let voteChoiceSelected = this.state.vote_choice.toString();
     let accountNameSelected = this.state.account_name.toString();
+
+    this.setState({
+      isLoading: true
+    });
 
     axios
       .post(`http://dappapi.zero2pi.com/api/v1/register_user`, {
@@ -107,29 +118,40 @@ class LeaseEos extends Component {
                 console.log(response.data);
                 console.log("3rd api call successfull");
                 this.setState({
-                  status: "Status : Ordered is matched."
+                  status: "Status : Order is matched.",
+                  isLeased: true,
+                  isLoading: false
                 });
               })
               .catch(e => {
-                this.setState({
-                  status: "Status : " + e.response.data.message
-                });
+                // this.setState({
+                //   status: "Status : " + e.response.data.message
+                // });
                 console.log(e.response.data.message);
+                this.setState({
+                  isLoading: false
+                });
               });
           })
 
           .catch(e => {
-            this.setState({
-              status: "Status : " + e.response.data.message
-            });
+            // this.setState({
+            //   status: "Status : " + e.response.data.message
+            // });
             console.log(e.response.data.message);
+            this.setState({
+              isLoading: false
+            });
           });
       })
       .catch(e => {
-        this.setState({
-          status: "Status : " + e.response.data.message
-        });
+        // this.setState({
+        //   status: "Status : " + e.response.data.message
+        // });
         console.log(e.response.data.message);
+        this.setState({
+          isLoading: false
+        });
       });
   }
 
@@ -193,9 +215,18 @@ class LeaseEos extends Component {
           </select>
         </div>
 
-        <button className="lease_button" onClick={() => this.leaseEos()}>
-          Lease
-        </button>
+        {this.state.isLoading ? (
+          <Spinner />
+        ) : (
+          <button
+            className="lease_button"
+            disabled={this.state.isLoading}
+            onClick={() => this.leaseEos()}
+          >
+            {/* {this.state.isLoading && <i className="fa fa-refresh fa-spin"></i>} */}
+            Lease
+          </button>
+        )}
         <br />
         <br />
         <h6>{this.state.status}</h6>
@@ -209,9 +240,7 @@ class LeaseEos extends Component {
             Withdraw EOS
           </button>
         ) : (
-          <button className="disabled_button" onClick={() => this.unregister()}>
-            Withdraw EOS
-          </button>
+          <button className="disabled_button">Withdraw EOS</button>
         )}
         <br />
       </section>
