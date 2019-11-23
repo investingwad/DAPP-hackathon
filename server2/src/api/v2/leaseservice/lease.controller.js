@@ -19,15 +19,15 @@ let {
 const { createClient } = require('@liquidapps/dapp-client')
 var client
 let dspEndpt = 'https://kylin-dsp-2.liquidapps.io'
-// const getClient = async () => {
-//   if (client) return client
-//   client = await createClient({
-//     network: 'kylin',
-//     httpEndpoint: dspEndpt,
-//     fetch: fetch
-//   })
-//   return client
-// }
+const getClient = async () => {
+  if (client) return client
+  client = await createClient({
+    network: 'kylin',
+    httpEndpoint: dspEndpt,
+    fetch: fetch
+  })
+  return client
+}
 
 leaseController.create = (req, res) => {
   res.status(200).send('create user')
@@ -43,12 +43,12 @@ leaseController.register_user = async (req, res) => {
     return res.status(400).send({ message: 'Missing required body parameter' })
   }
   try {
-    let client = await createClient({
-      network: 'kylin',
-      httpEndpoint: dspEndpt,
-      fetch: fetch
-    })
-    const service = await client.service('vaccounts', process.env.contract)
+    // let client = await createClient({
+    //   network: 'kylin',
+    //   httpEndpoint: dspEndpt,
+    //   fetch: fetch
+    // })
+    const service = await (await getClient()).service('vaccounts', process.env.contract)
     let prv_key = await PrivateKey.randomKey()
     prv_key = prv_key.toWif()
     console.log(prv_key)
@@ -78,15 +78,15 @@ leaseController.register_user = async (req, res) => {
       }
     )
     console.log('response_registeraction', response_registeraction)
-    // const response_withdraw = await service.push_liquid_account_transaction(
-    //   process.env.contract,
-    //   prv_key,
-    //   'testvacc',
-    //   {
-    //     username: req.body.account_name // process.env.user1,
-    //   }
-    // )
-    // console.log('response_registeraction', response_withdraw)
+    const response_withdraw = await service.push_liquid_account_transaction(
+      process.env.contract,
+      prv_key,
+      'testvacc',
+      {
+        username: req.body.account_name // process.env.user1,
+      }
+    )
+    console.log('response_registeraction', response_withdraw)
     let userkeys = new Userkey()
     userkeys.user = req.body.account_name
     userkeys.private = prv_key
