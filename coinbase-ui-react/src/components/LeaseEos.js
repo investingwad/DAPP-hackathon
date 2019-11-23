@@ -10,9 +10,9 @@ class LeaseEos extends Component {
     this.state = {
       account_name: "",
       lease_amount: "10.0000 EOS",
-      lease_period: "7",
+      lease_period: "30",
       vote_choice: "leaseproxy22",
-      status: "",
+      status: "Status",
       isLeased: false
     };
 
@@ -77,9 +77,13 @@ class LeaseEos extends Component {
         vote_choice: voteChoiceSelected,
         account_name: accountNameSelected
       })
-      .then(function(response) {
+      .then(response => {
         console.log(response);
-        console.log(response.data);
+        console.log(response.data.message);
+
+        this.setState({
+          status: "Status : Successfully Registered User!"
+        });
 
         // On Success of first API Call
         // Calling second API
@@ -88,10 +92,10 @@ class LeaseEos extends Component {
             account_name: accountNameSelected,
             amount: leaseAmountSelected
           })
-          .then(function(response) {
+          .then(response => {
             console.log(response.data);
             this.setState({
-              stateus: response.data.message
+              status: "Status : Succesfully Leased EOS"
             });
             // On Success of second API Call
             // Calling THIRD  API
@@ -99,33 +103,47 @@ class LeaseEos extends Component {
               .post(`http://dappapi.zero2pi.com/api/v1/match_order`, {
                 account_name: accountNameSelected
               })
-              .then(function(response) {
+              .then(response => {
                 console.log(response.data);
                 console.log("3rd api call successfull");
+                this.setState({
+                  status: "Status : Ordered is matched."
+                });
               })
-              .catch(function(error) {
-                console.log(error);
+              .catch(e => {
+                this.setState({
+                  status: "Status : " + e.response.data.message
+                });
+                console.log(e.response.data.message);
               });
           })
-          .catch(function(error) {
-            console.log(error);
+
+          .catch(e => {
+            this.setState({
+              status: "Status : " + e.response.data.message
+            });
+            console.log(e.response.data.message);
           });
       })
-      .catch(function(error) {
-        console.log(error);
+      .catch(e => {
+        this.setState({
+          status: "Status : " + e.response.data.message
+        });
+        console.log(e.response.data.message);
       });
   }
 
   render() {
-    const { coinDetails } = this.props;
+    // const { coinDetails } = this.props;
 
     return (
       <section className="leaseeos">
-        <h3>Lease EOS </h3>
+        <h3>Lease EOS</h3>
         <br />
         <div className="form-group">
           <label htmlFor="order-title">
-            Enter liquid account name ( Check availability )
+            Enter liquid account name{" "}
+            <span className="highlight_text">( Check availability )</span>
           </label>
           <input
             type="text"

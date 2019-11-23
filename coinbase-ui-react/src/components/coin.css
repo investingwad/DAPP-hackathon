@@ -60,7 +60,7 @@
   margin: 4px;
 }
 
-.send_receive_lease_button {
+.send_receive_button {
   width: 125px;
   background-color: rgb(248, 248, 248);
   font-size: small;
@@ -70,8 +70,24 @@
   margin: 4px;
 }
 
-.send_receive_lease_button:hover {
+.send_receive_button:hover {
   opacity: 0.85;
   color: #fff;
   background-color: #006ace;
+}
+
+.lease_button {
+  width: 125px;
+  background-color: rgb(248, 248, 248);
+  font-size: small;
+  color: black;
+  padding: 10px;
+  margin: 2px;
+  margin: 4px;
+}
+
+.lease_button:hover {
+  opacity: 0.75;
+  color: rgba(68, 68, 68, 0.918);
+  border: 2px solid #006ace;
 }

@@ -45,3 +45,8 @@
   flex-direction: column;
   margin-bottom: 15px;
 }
+.highlight_text {
+  color: #3384e0;
+  font-weight: 500;
+  /* text-decoration: underline; */
+}

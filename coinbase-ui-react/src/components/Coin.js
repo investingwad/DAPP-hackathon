@@ -17,8 +17,8 @@ class Coin extends Component {
         <div className="coin-name">{coinDetails.name}</div>
         <div className="coin-balance-text">{coinDetails.balanceText}</div>
         <div className="coin-price-info">
-          <button className="send_receive_lease_button">Send</button>
-          <button className="send_receive_lease_button">Receive</button>
+          <button className="send_receive_button">Send</button>
+          <button className="send_receive_button">Receive</button>
           <NavLink
             to={{
               pathname: "/leaseService",
@@ -26,7 +26,7 @@ class Coin extends Component {
             }}
           >
             {coinDetails.possibleToLease ? (
-              <button className="send_receive_lease_button">Lease</button>
+              <button className="lease_button">Lease</button>
             ) : null}
           </NavLink>
         </div>
