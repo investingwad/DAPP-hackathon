@@ -38,6 +38,10 @@ router.get('/get_orderdet/:authorizer', (req, res) => {
   router.get('/get_orderstatdet', (req, res) => {
     leaseController.get_orderstatdet(req, res)
   })
+
+  router.get('/get_orderstatdet_byaccount/:account_name', (req, res) => {
+    leaseController.get_orderstatdet_byaccount(req, res)
+  })
   
   router.get('/get_accountblc/:vaccount', (req, res) => {
     leaseController.get_accountblc(req, res)

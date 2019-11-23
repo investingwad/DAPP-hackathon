@@ -3,14 +3,14 @@
 
 void decfinance::registeracc(login_struct payload)
 {
-  require_vaccount(payload.username);
+  require_vaccount(payload.vaccount);
   lender_tab lender(_self, _self.value);
-  auto itr = lender.find(payload.username.value);
+  auto itr = lender.find(payload.vaccount.value);
   check(itr == lender.end(), "Account already registered");
 
   lender.emplace(_self, [&](auto &e) {
     e.sequence = lender.available_primary_key();
-    e.username = payload.username;
+    e.username = payload.vaccount;
     e.balance = payload.balance;
     e.max_lease_period = payload.lease_period;
     e.vote_choice = payload.vote_choice;
@@ -185,22 +185,22 @@ void decfinance::checkorder(name vaccount, uint64_t id, uint64_t orderstat_id)
   matchorder(vaccount, id, orderstat_id);
 }
 
-void decfinance::withdraw(name vaccount)
+void decfinance::withdraw(test_struct payload)
 {
-  require_auth(_self);
-  //require_vaccount(payload.username);
+  //require_auth(_self);
+  require_vaccount(payload.vaccount);
   lender_tab lender(_self, _self.value);
   lender_history_tab lenderhistory(_self, _self.value);
-  auto itr = lender.find(vaccount.value);
+  auto itr = lender.find(payload.vaccount.value);
   check(itr != lender.end(), "vaccount not found");
   check(itr->initial_transfer == true, "No amount was transferred by vaccount user");
   check(itr->total_leaseout_amount.amount == 0, "can not withdraw. amount leased out");
   asset amount_to_transfer = itr->balance + itr->total_reward_amount;
-  auto lender_h_itr = lenderhistory.find(vaccount.value);
+  auto lender_h_itr = lenderhistory.find(payload.vaccount.value);
   if (lender_h_itr == lenderhistory.end())
   {
     lenderhistory.emplace(_self, [&](auto &e) {
-      e.username = vaccount;
+      e.username = payload.vaccount;
       e.balance = itr->balance + itr->total_reward_amount;
     });
   }
@@ -221,7 +221,7 @@ void decfinance::withdraw(name vaccount)
 
 void decfinance::testvacc(test_struct payload)
 {
-  require_vaccount(payload.username);
+  require_vaccount(payload.vaccount);
   print("here");
 }
 

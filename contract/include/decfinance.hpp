@@ -40,24 +40,24 @@ public:
 
   struct login_struct
   {
-    name username;
+    name vaccount;
     asset balance;
     uint32_t lease_period;
     name vote_choice;
 
-    EOSLIB_SERIALIZE(login_struct, (username)(balance)(lease_period)(vote_choice))
+    EOSLIB_SERIALIZE(login_struct, (vaccount)(balance)(lease_period)(vote_choice))
   };
 
   struct test_struct
   {
-    name username;
+    name vaccount;
 
-    EOSLIB_SERIALIZE(test_struct, (username))
+    EOSLIB_SERIALIZE(test_struct, (vaccount))
   };
 
   [[eosio::action]] void registeracc(login_struct payload);
   [[eosio::action]] void checkorder(name vaccount, uint64_t id, uint64_t orderstat_id);
-  [[eosio::action]] void withdraw(name vaccount);
+  [[eosio::action]] void withdraw(test_struct payload);
    [[eosio::action]] void testvacc(test_struct payload);
   [[eosio::action]] void leaseunstake(uint64_t orderid);
   [[eosio::action]] void addproxy(name account_name, std::string desc);
@@ -146,7 +146,7 @@ public:
 
   typedef eosio::multi_index<"lenderinfo2"_n, shardbucket> lender_tab_abi;
   typedef eosio::multi_index<"ordersinfo1"_n, shardbucket> orders_tab_abi;
-  typedef eosio::multi_index<"orderstat1"_n, shardbucket> lease_status_tab_abi;
+  typedef eosio::multi_index<"orderstat2"_n, shardbucket> lease_status_tab_abi;
   typedef eosio::multi_index<"lenderrec"_n, shardbucket> lender_history_tab_abi;
 
   vector<string>
@@ -183,7 +183,7 @@ public:
   typedef eosio::singleton<"exchange"_n, exchange> exchange_tab;
   typedef eosio::multi_index<"exchange"_n, exchange> exchange_dummy_abi;
 
-  VACCOUNTS_APPLY(((login_struct)(registeracc))((test_struct)(testvacc)))
+  VACCOUNTS_APPLY(((login_struct)(registeracc))((test_struct)(withdraw)))
   //VACCOUNTS_APPLY(((login_struct)(registeracc))((unreg_struct)(withdraw)))
 };
 //CONTRACT_END((registeracc)(regaccount)(xdcommit)(xvinit))
