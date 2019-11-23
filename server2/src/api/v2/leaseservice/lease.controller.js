@@ -6,7 +6,7 @@ const fetch = require('isomorphic-fetch')
 const Order = require('./model/order.model')
 const Orderstat = require('./model/orderstatus.model')
 const Userkey = require('./model/userkeys.model')
-
+const errorhandler = require('./errorhandler')
 const eosaction = require('./eosaction/eosaction')
 let {
   PrivateKey,
@@ -19,15 +19,15 @@ let {
 const { createClient } = require('@liquidapps/dapp-client')
 var client
 let dspEndpt = 'https://kylin-dsp-2.liquidapps.io'
-// const getClient = async () => {
-//   if (client) return client
-//   client = await createClient({
-//     network: 'kylin',
-//     httpEndpoint: dspEndpt,
-//     fetch: fetch
-//   })
-//   return client
-// }
+const getClient = async () => {
+  if (client) return client
+  client = await createClient({
+    network: 'kylin',
+    httpEndpoint: dspEndpt,
+    fetch: fetch
+  })
+  return client
+}
 
 leaseController.create = (req, res) => {
   res.status(200).send('create user')
@@ -43,12 +43,12 @@ leaseController.register_user = async (req, res) => {
     return res.status(400).send({ message: 'Missing required body parameter' })
   }
   try {
-    let client = await createClient({
-      network: 'kylin',
-      httpEndpoint: dspEndpt,
-      fetch: fetch
-    })
-    const service = await client.service('vaccounts', process.env.contract)
+    // let client = await createClient({
+    //   network: 'kylin',
+    //   httpEndpoint: dspEndpt,
+    //   fetch: fetch
+    // })
+    const service = await (await getClient()).service('vaccounts', process.env.contract)
     let prv_key = await PrivateKey.randomKey()
     prv_key = prv_key.toWif()
     console.log(prv_key)
@@ -78,15 +78,6 @@ leaseController.register_user = async (req, res) => {
       }
     )
     console.log('response_registeraction', response_registeraction)
-    // const response_withdraw = await service.push_liquid_account_transaction(
-    //   process.env.contract,
-    //   prv_key,
-    //   'testvacc',
-    //   {
-    //     vaccount: req.body.account_name // process.env.user1,
-    //   }
-    // )
-    // console.log('response_registeraction', response_withdraw)
     let userkeys = new Userkey()
     userkeys.user = req.body.account_name
     userkeys.private = prv_key
@@ -95,14 +86,8 @@ leaseController.register_user = async (req, res) => {
     return res.status(200).send({ message: 'Successful' })
     // lease_transfer(req.body.lease_amount);
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -155,14 +140,8 @@ leaseController.create_order = async (req, res) => {
     console.log('orderobj', orderobj)
     return res.status(200).send({ message: orderobj })
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -186,14 +165,8 @@ leaseController.lease_transfer = async (req, res) => {
     console.log('result', result)
     return res.status(200).send({ message: 'Successfully transferred' })
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -266,7 +239,7 @@ leaseController.match_order = async (req, res) => {
       orderstat.filled_at = new Date().toISOString().split('.')[0]
 
       let ordderstatres = await orderstat.save()
-      return res.status(200).send(ordderstatres)
+      return res.status(200).send({message : ordderstatres})
       // }
     } else {
       return res
@@ -274,14 +247,8 @@ leaseController.match_order = async (req, res) => {
         .send({ message: 'At present no match found for this lease request' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -290,19 +257,6 @@ leaseController.withdraw = async (req, res) => {
     return res.status(400).send({ message: 'Missing required body parameter' })
   }
   try {
-    // let data = {
-    //   vaccount: req.body.account_name
-    // }
-    // const result = await eosaction.pushtrx(
-    //   'withdraw',
-    //   data,
-    //   process.env.contract,
-    //   process.env.contract
-    // )
-    // console.log('result', result)
-    // return res
-    //     .status(200)
-    //      .send({ message: 'Successfully withdrawn lease-out request' })
     let client = await createClient({
       network: 'kylin',
       httpEndpoint: dspEndpt,
@@ -331,14 +285,8 @@ leaseController.withdraw = async (req, res) => {
         .send({ message: 'No private key found for this vaccount' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error in withdraw' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -365,14 +313,8 @@ leaseController.cancelorder = async (req, res) => {
       .status(200)
       .send({ message: 'Successfully withdrawn order request' })
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -397,40 +339,28 @@ leaseController.leaseunstake = async (req, res) => {
         .remove()
         .exec()
       await order.remove()
-      return res.status(200).send('Successfully unstaked')
+      return res.status(200).send({message : 'Successfully unstaked'})
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error while transferring' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
 leaseController.get_orderdet = async (req, res) => {
   if (!req.params.authorizer) {
-    return res.status(400).send({ message: 'Missing required body parameter' })
+    return res.status(400).send({ message: 'Missing required parameter' })
   }
   try {
     let order = await Order.find({ authorizer: req.params.authorizer })
     if (order) {
-      return res.status(200).send(order)
+      return res.status(200).send({message : order})
     } else {
-      return res.status(400).send({ message: 'no order details found' })
+      return res.status(400).send({ message: 'no order created by this account name' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error in fetch' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
@@ -438,23 +368,49 @@ leaseController.get_orderstatdet = async (req, res) => {
   try {
     let orderstat = await Orderstat.find({})
     if (orderstat) {
-      return res.status(200).send(orderstat)
+      return res.status(200).send({message : orderstat})
     } else {
       return res.status(400).send({ message: 'no order status details found' })
     }
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
+  }
+}
+
+leaseController.get_orderstatdet_byaccount = async (req, res) => {
+  if (!req.params.account_name) {
+    return res.status(400).send({ message: 'Missing required parameter' })
+  }
+  try {
+    let orderstat = await Orderstat.find({lender : req.params.account_name})
+    if (orderstat) {
+    let respobj = {}
+      let vaccount_blc = await eosaction.getvaccountdet(req.params.account_name)
+  
+      if(vaccount_blc.row)
+      {
+        respobj.liquid_blc = vaccount_blc.row.balance,
+        respobj.total_leaseout_amount = vaccount_blc.row.total_leaseout_amount
+        respobj.total_rewards_amount = vaccount_blc.row.total_reward_amount
+      }
+      respobj.order_matched = orderstat
+     
+     
+      return res.status(200).send({message : respobj})
     } else {
-      return res.status(400).send({ message: 'Error in fetch' })
+      return res.status(400).send({ message: 'no order matched yet for this account_name' })
     }
+  } catch (err) {
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
 leaseController.get_accountblc = async (req, res) => {
+  if (!req.params.vaccount) {
+    return res.status(400).send({ message: 'Missing required parameter' })
+  }
   try {
     let vaccount_blc = await eosaction.getvaccountdet(req.params.vaccount)
     let vaccount_history = await eosaction.getvaccounthistory(
@@ -466,18 +422,12 @@ leaseController.get_accountblc = async (req, res) => {
       respobj.userblc_totalstaked = vaccount_blc.row.total_leaseout_amount
       respobj.userblc_totalreward = vaccount_blc.row.total_reward_amount
     } else if (vaccount_history.row) {
-      respobj.userblc_leaseout = vaccount_history.row.balance
-    } else respobj.user_leased_out = '0.0000 EOS'
-    return res.status(200).send(respobj)
+      respobj.userblc_leaseout_history = vaccount_history.row.balance
+    } else respobj.userblc_leaseout = '0.0000 EOS'
+    return res.status(200).send({message : respobj})
   } catch (err) {
-    console.log('s.m. err--', err)
-    let msg = err.toString().split(':')
-    if (msg) {
-      let errmsg = msg[msg.length - 1]
-      return res.status(400).send({ message: errmsg })
-    } else {
-      return res.status(400).send({ message: 'Error in fetch' })
-    }
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
   }
 }
 
