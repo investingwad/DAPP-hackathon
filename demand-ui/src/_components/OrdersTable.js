@@ -132,7 +132,7 @@ export default function OrdersTable(props) {
         row.values.order_stat === "queue" ? (
           handleWithdraw(row)
         ) : (
-          <span>Cannot Withdraw</span>
+          <span>Withdraw not available</span>
         )
     }
   ]);
