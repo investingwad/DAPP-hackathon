@@ -44,15 +44,29 @@ function Table({ columns, data }) {
 }
 const getDate = e => {
   console.log("stat", e.values.order_stat);
-  
-  const created_at_date = parseInt(e.original.createdAt.slice(8,10))
-  const lease_period = parseInt(e.original.lease_period)
 
-  const newDate = created_at_date + lease_period;
-  
-  const yoDate = new Date(`${e.original.createdAt.slice(5,7)}/${newDate}/${e.original.createdAt.slice(0,4)}`)
-
-  return yoDate.toDateString()
+  const created_at_date = parseInt(e.original.createdAt.slice(8, 10));
+  const lease_period = parseInt(e.original.lease_period);
+  let newDate;
+  let yoDate;
+  let newMonth;
+  if (!created_at_date + lease_period > 30) {
+    newDate = created_at_date + lease_period;
+    yoDate = new Date(
+      `${e.original.createdAt.slice(
+        5,
+        7
+      )}/${newDate}/${e.original.createdAt.slice(0, 4)}`
+    );
+    return yoDate.toDateString();
+  } else {
+    newDate = lease_period;
+    newMonth = parseInt(e.original.createdAt.slice(5, 7)) + 1;
+    yoDate = new Date(
+      `${newMonth}/${newDate}/${e.original.createdAt.slice(0, 4)}`
+    );
+    return yoDate.toDateString();
+  }
 };
 
 const handleWithdraw = row => {
@@ -63,9 +77,9 @@ const handleWithdraw = row => {
 
   const withdraw = async () => {
     await axios.post(API, data).then(res => {
-      window.location = "/"
-      console.log("res---->", res)
-
+      window.location = "/";
+      alert("Withdrawn!!");
+      console.log("res---->", res);
     });
   };
 
@@ -104,7 +118,12 @@ export default function OrdersTable(props) {
     {
       Header: "End time for lease",
       accessor: "lease_period",
-      Cell: ({ row }) => row.values.order_stat !== "queue" ? getDate(row) : <span>Lease not started yet!!</span>
+      Cell: ({ row }) =>
+        row.values.order_stat !== "queue" ? (
+          getDate(row)
+        ) : (
+          <span>Lease not started yet!!</span>
+        )
     },
     {
       Header: "Actions",
