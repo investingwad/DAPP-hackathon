@@ -43,16 +43,16 @@ function Table({ columns, data }) {
   );
 }
 const getDate = e => {
-  Date.prototype.addDays = function(days) {
-    var date = new Date(this.valueOf());
-    date.setDate(date.getDate() + days);
-    return date;
-  };
+  console.log("stat", e.values.order_stat);
+  
+  const created_at_date = parseInt(e.original.createdAt.slice(8,10))
+  const lease_period = parseInt(e.original.lease_period)
 
-  const date = new Date();
-  const newDate = date.addDays(e.values.lease_period);
+  const newDate = created_at_date + lease_period;
+  
+  const yoDate = new Date(`${e.original.createdAt.slice(5,7)}/${newDate}/${e.original.createdAt.slice(0,4)}`)
 
-  return newDate.toString().slice(0, 24);
+  return yoDate.toDateString()
 };
 
 const handleWithdraw = row => {
@@ -62,7 +62,11 @@ const handleWithdraw = row => {
   };
 
   const withdraw = async () => {
-    await axios.post(API, data).then(res => console.log("res---->", res));
+    await axios.post(API, data).then(res => {
+      window.location = "/"
+      console.log("res---->", res)
+
+    });
   };
 
   return (
@@ -100,13 +104,13 @@ export default function OrdersTable(props) {
     {
       Header: "End time for lease",
       accessor: "lease_period",
-      Cell: ({ row }) => getDate(row)
+      Cell: ({ row }) => row.values.order_stat !== "queue" ? getDate(row) : <span>Lease not started yet!!</span>
     },
     {
       Header: "Actions",
       accessor: "authorizer",
       Cell: ({ row }) =>
-        row.values.order_stat ? (
+        row.values.order_stat === "queue" ? (
           handleWithdraw(row)
         ) : (
           <span>Cannot Withdraw</span>

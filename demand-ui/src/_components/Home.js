@@ -46,6 +46,7 @@ class Home extends Component {
   }
 
   componentDidMount() {
+    this.connect()
     this.getUserBalance();
   }
 
@@ -175,6 +176,7 @@ class Home extends Component {
           .post("http://dappapi.zero2pi.com/api/v1/create_order", data)
           .then(res => {
             if (res.data.message.authorizer !== "") {
+              window.location = "/"
               alert("Your order has been succesfully created!!");
             }
           });
@@ -251,7 +253,7 @@ class Home extends Component {
                       </span>
                       <DropdownButton
                         id="dropdown-item-button"
-                        title="Actions"
+                        title="CPU/NET"
                         className="dd-button"
                       >
                         <Dropdown.Item
