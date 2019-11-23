@@ -125,7 +125,7 @@ class LeaseEos extends Component {
         <br />
         <div className="form-group">
           <label htmlFor="order-title">
-            Enter Temporary Account Name (Decided by exchange)
+            Enter liquid account name ( Check availability )
           </label>
           <input
             type="text"
@@ -162,16 +162,16 @@ class LeaseEos extends Component {
         </div>
 
         <div className="form-group">
-          <label htmlFor="order-title">Enter Maxiumum Lockup Period</label>
+          <label htmlFor="order-title">Enter Maximum Lockup Period</label>
           <select
             className="form-control"
             onChange={this.onChangeLeasePeriod.bind(this)}
           >
-            <option value="7" selected>
-              7 days
+            <option value="30" selected>
+              30 days
             </option>
-            <option value="14">14 days</option>
-            <option value="21">21 days</option>
+            <option value="60">60 days</option>
+            <option value="90">90 days</option>
           </select>
         </div>
 
