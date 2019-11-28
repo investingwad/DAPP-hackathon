@@ -1,7 +1,7 @@
 {
-  "name": "Moonlight_node_bridge",
+  "name": "DAPP_Service",
   "version": "1.0.0",
-  "description": "nodejs bridge for moonlight",
+  "description": "backend for DAPP service",
   "main": "app.js",
   "scripts": {
     "dev": "nodemon -w src --exec \"babel-node src --presets es2015\"",

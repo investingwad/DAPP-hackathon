@@ -3,7 +3,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 var orderstatschema = new Schema({
-    id: {
+    orderstat_id: {
         type: Number,
         unique: true,
         required: true

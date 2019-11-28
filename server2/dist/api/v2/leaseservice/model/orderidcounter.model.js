@@ -3,7 +3,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 var ordercounterschema = new Schema({
-    id: {
+    order_id: {
         type: Number,
         unique: true,
         required: true
