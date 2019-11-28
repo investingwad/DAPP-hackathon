@@ -44,5 +44,21 @@ router.post("/leaseunstake", function (req, res) {
     _lease2.default.leaseunstake(req, res);
 });
 
+router.get('/get_orderdet/:authorizer', function (req, res) {
+    _lease2.default.get_orderdet(req, res);
+});
+
+router.get('/get_orderstatdet', function (req, res) {
+    _lease2.default.get_orderstatdet(req, res);
+});
+
+router.get('/get_orderstatdet_byaccount/:account_name', function (req, res) {
+    _lease2.default.get_orderstatdet_byaccount(req, res);
+});
+
+router.get('/get_accountblc/:vaccount', function (req, res) {
+    _lease2.default.get_accountblc(req, res);
+});
+
 exports.default = router;
 //# sourceMappingURL=lease.routes.js.map

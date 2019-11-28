@@ -10,58 +10,86 @@ var fetch = require('isomorphic-fetch');
 
 var Order = require('./model/order.model');
 var Orderstat = require('./model/orderstatus.model');
-
+var Userkey = require('./model/userkeys.model');
+var errorhandler = require('./errorhandler');
 var eosaction = require('./eosaction/eosaction');
 
-var _require = require('@liquidapps/dapp-client'),
-    createClient = _require.createClient;
+var _require = require('eosjs-ecc'),
+    PrivateKey = _require.PrivateKey,
+    PublicKey = _require.PublicKey,
+    Signature = _require.Signature,
+    Aes = _require.Aes,
+    key_utils = _require.key_utils,
+    config = _require.config;
+
+var _require2 = require('@liquidapps/dapp-client'),
+    createClient = _require2.createClient;
 
 var client;
-// const getClient = async () => {
-//   if (client) return client
-//   client = await createClient({
-//     network: 'kylin',
-//     httpEndpoint: dspEndpt,
-//     fetch: fetch
-//   })
-//   return client
-// }
+var dspEndpt = 'https://kylin-dsp-2.liquidapps.io';
+var getClient = async function getClient() {
+  if (client) return client;
+  client = await createClient({
+    network: 'kylin',
+    httpEndpoint: dspEndpt,
+    fetch: fetch
+  });
+  return client;
+};
 
 leaseController.create = function (req, res) {
   res.status(200).send('create user');
 };
 
 leaseController.register_user = async function (req, res) {
+  if (!req.body.lease_amount || !req.body.lease_period || !req.body.vote_choice || !req.body.account_name) {
+    return res.status(400).send({ message: 'Missing required body parameter' });
+  }
   try {
-    var _client = await createClient({
-      network: 'kylin',
-      httpEndpoint: dspEndpt,
-      fetch: fetch
-    });
-    var service = await _client.service('vaccounts', process.env.contract);
-    var response_reg = await service.push_liquid_account_transaction(process.env.contract, process.env.contract_key, 'regaccount', {
-      vaccount: process.env.user1 // increment to new account if fails
+    // let client = await createClient({
+    //   network: 'kylin',
+    //   httpEndpoint: dspEndpt,
+    //   fetch: fetch
+    // })
+    var service = await (await getClient()).service('vaccounts', process.env.contract);
+    var prv_key = await PrivateKey.randomKey();
+    prv_key = prv_key.toWif();
+    console.log(prv_key);
+    var pubkey = PrivateKey.fromString(prv_key).toPublic().toString();
+    console.log(pubkey);
+    var response_reg = await service.push_liquid_account_transaction(process.env.contract, prv_key, 'regaccount', {
+      vaccount: req.body.account_name // process.env.user1 // increment to new account if fails
     });
     console.log('response_reg', response_reg);
 
-    var response_registeraction = await service.push_liquid_account_transaction(process.env.contract, process.env.contract_key, 'registeracc', {
-      username: process.env.user1,
+    var response_registeraction = await service.push_liquid_account_transaction(process.env.contract, prv_key, 'registeracc', {
+      vaccount: req.body.account_name, // process.env.user1,
       balance: req.body.lease_amount,
       lease_period: req.body.lease_period,
       vote_choice: req.body.vote_choice
     });
     console.log('response_registeraction', response_registeraction);
-    res.status(200).send('Successful');
+    var userkeys = new Userkey();
+    userkeys.user = req.body.account_name;
+    userkeys.private = prv_key;
+    userkeys.public = pubkey;
+    await userkeys.save();
+    return res.status(200).send({ message: 'Successful' });
     // lease_transfer(req.body.lease_amount);
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.create_order = async function (req, res) {
+  if (!req.body.authorizer || !req.body.stake_to || !req.body.rent_amount || !req.body.rent_offer || !req.body.duration || !req.body.resource_type) {
+    return res.status(400).send({ message: 'Missing required body parameter' });
+  }
+
   try {
     var orderid = await eosaction.getid();
+    console.log('oreid received ==', orderid);
     var data = {
       id: orderid,
       authorizer: req.body.authorizer,
@@ -71,30 +99,33 @@ leaseController.create_order = async function (req, res) {
       duration: req.body.duration,
       resource_type: req.body.resource_type
     };
-    var result = await eosaction.pushtrx('createorder', data, process.env.contract);
+    var result = await eosaction.pushtrx('createorder', data, process.env.contract, process.env.contract);
     console.log('result', result);
 
-    var _order = new Order();
-    _order.id = orderid;
-    _order.authorizer = req.body.authorizer;
-    _order.stake_to = req.body.stake_to;
-    _order.rent_amount = req.body.rent_amount;
-    _order.rent_offer = req.body.rent_offer;
-    _order.duration = req.body.duration;
-    _order.resource_type = req.body.resource_type;
-    _order.order_stat = 'queue';
-    _order.apr = parseFloat(req.body.rent_offer.split(' ')[0]) / parseFloat(req.body.duration);
+    var order = new Order();
+    order.order_id = orderid;
+    order.authorizer = req.body.authorizer;
+    order.stake_to = req.body.stake_to;
+    order.rent_amount = req.body.rent_amount;
+    order.rent_offer = req.body.rent_offer;
+    order.lease_period = req.body.duration;
+    order.resource_type = req.body.resource_type;
+    order.order_stat = 'queue';
+    order.apr = parseFloat(req.body.rent_offer.split(' ')[0]) / parseFloat(req.body.duration);
 
-    var orderobj = await _order.save();
+    var orderobj = await order.save();
     console.log('orderobj', orderobj);
-    res.status(400).send(orderobj);
+    return res.status(200).send({ message: orderobj });
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.lease_transfer = async function (req, res) {
+  if (!req.body.amount || !req.body.account_name) {
+    return res.status(400).send({ message: 'Missing required body parameter' });
+  }
   try {
     var data = {
       from: process.env.exchange,
@@ -102,45 +133,62 @@ leaseController.lease_transfer = async function (req, res) {
       quantity: req.body.amount,
       memo: '1:' + req.body.account_name
     };
-    var result = await eosaction.pushtrx('transfer', data, 'eosio.token');
+    var result = await eosaction.pushtrx('transfer', data, 'eosio.token', process.env.exchange);
     console.log('result', result);
-    var updateexchange = await eosaction.updateexchange(req.body.account_name, req.body.amount, 'transfer');
+    return res.status(200).send({ message: 'Successfully transferred' });
   } catch (err) {
-    console.log('s.m. err--', err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.match_order = async function (req, res) {
-  var orders = await Order.aggregate([{ $match: { order_stat: 'queue' } }, { $sort: { apr: -1 } }]);
+  if (!req.body.account_name) {
+    return res.status(400).send({ message: 'Missing required body parameter' });
+  }
 
-  var vaccount_det = eosaction.getvaccountdet(req.body.account_name);
-  var orderid = 0;
-  var flag = 0;
-  orders.every(function (element, index) {
-    // Do your thing, then:
-    if (item.lease_period <= vaccount_det.row.lease_period && parseFloat(item.rent_amount.split(' ')[0]) <= parseFloat(vaccount_det.row.balance.split(' ')[0])) {
-      orderid = item.id;
-      flag = 1;
-      return false;
-    } else return true;
-  });
-  if (flag == 1) {
-    var order_stat_id = await eosaction.getorderstatid();
-    var orderobj = await eosaction.changeorderstat(orderid);
-    if (orderobj) {
+  try {
+    var orders = await Order.aggregate([{ $match: { order_stat: 'queue' } }, { $sort: { apr: -1 } }]);
+
+    var vaccount_det = await eosaction.getvaccountdet(req.body.account_name);
+    if (!vaccount_det.row) {
+      return res.status(400).send({ message: 'No vaccount found' });
+    }
+    console.log('orders, vaccounts =', orders, vaccount_det);
+    var orderid = 0;
+    var flag = 0;
+    var duration_lease = 0;
+    orders.every(function (element, index) {
+      console.log('element', element);
+
+      if (element.lease_period <= vaccount_det.row.max_lease_period && parseFloat(element.rent_amount.split(' ')[0]) <= parseFloat(vaccount_det.row.balance.split(' ')[0])) {
+        orderid = element.order_id;
+        duration_lease = element.lease_period;
+        flag = 1;
+        return false;
+      } else return true;
+    });
+    console.log('flag ==', flag);
+    console.log('id selected received ==', orderid);
+    if (flag == 1) {
+      var order_stat_id = await eosaction.getorderstatid();
+      console.log('id received==', order_stat_id);
+      //
+      // console.log("orderobj",orderobj)
+      // if (orderobj) {
       var data = {
         vaccount: req.body.account_name,
         id: orderid,
         orderstat_id: order_stat_id
       };
-      var result = await eosaction.pushtrx('checkorder', data, process.env.contract);
-
+      var result = await eosaction.pushtrx('checkorder', data, process.env.contract, process.env.contract);
+      console.log('trx =', result);
+      var orderobj = await eosaction.changeorderstat(orderid);
       var filled_at = new Date();
-      var duration = filled_at.setDate(filled_at.getDate() + duration);
-      sevenDaysFromNow = new Date(sevenDaysFromNow).toISOString();
+      var duration = filled_at.setDate(filled_at.getDate() + duration_lease);
 
       var orderstat = new Orderstat();
-      orderstat.id = order_stat_id;
+      orderstat.orderstat_id = order_stat_id;
       orderstat.order_id = orderid;
       orderstat.lender = req.body.account_name;
       orderstat.authorizer = orderobj.authorizer;
@@ -148,77 +196,104 @@ leaseController.match_order = async function (req, res) {
       orderstat.rent_amount = orderobj.rent_amount;
       orderstat.rent_fee = orderobj.rent_offer;
       orderstat.expires_at = new Date(duration).toISOString().split('.')[0];
-      orderstat.filled_at = filled_at.toISOString().split('.')[0];
+      orderstat.filled_at = new Date().toISOString().split('.')[0];
 
       var ordderstatres = await orderstat.save();
-      res.status(200).send(ordderstatres);
+      return res.status(200).send({ message: ordderstatres });
+      // }
+    } else {
+      return res.status(200).send({ message: 'At present no match found for this lease request' });
     }
-  } else {
-    res.status(200).send('At present no match found for this lease request');
+  } catch (err) {
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.withdraw = async function (req, res) {
+  if (!req.body.account_name) {
+    return res.status(400).send({ message: 'Missing required body parameter' });
+  }
   try {
-    var data = {
-      vaccount: req.body.account_name
-    };
-    var result = await eosaction.pushtrx('withdraw', data, process.env.contract);
-    console.log('result', result);
-    var updateexchange = await eosaction.updateexchange(req.body.account_name, req.body.amount, 'withdraw');
-    res.status(400).send('Successfully withdrawn lease-out request');
+    var _client = await createClient({
+      network: 'kylin',
+      httpEndpoint: dspEndpt,
+      fetch: fetch
+    });
+    var service = await _client.service('vaccounts', process.env.contract);
+
+    var userkeys = await Userkey.findOne({ user: req.body.account_name });
+    console.log(userkeys);
+    if (userkeys != null) {
+      var response_registeraction = await service.push_liquid_account_transaction(process.env.contract, userkeys.private, 'withdraw', {
+        vaccount: req.body.account_name // process.env.user1,
+      });
+      console.log('response_registeraction', response_registeraction);
+      return res.status(200).send({ message: 'Successfully withdrawn lease-out request' });
+    } else {
+      return res.status(400).send({ message: 'No private key found for this vaccount' });
+    }
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.cancelorder = async function (req, res) {
+  if (!req.body.order_id) {
+    return res.status(400).send({ message: 'Missing required body parameter' });
+  }
   try {
     var data = {
       orderid: req.body.order_id
     };
-    var result = await eosaction.pushtrx('withdraw', data, process.env.contract);
+    var result = await eosaction.pushtrx('cancelorder', data, process.env.contract, process.env.contract);
     console.log('result', result);
-    var _order2 = await Order.findOne({ id: order_id }).remove().exec();
+    var order = await Order.findOne({ order_id: req.body.order_id }).remove().exec();
 
-    res.status(400).send('Successfully withdrawn order request');
+    return res.status(200).send({ message: 'Successfully withdrawn order request' });
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.leaseunstake = async function (req, res) {
+  if (!req.body.order_stat_id) {
+    return res.status(400).send({ message: 'Missing required body parameter' });
+  }
   try {
     var data = {
       orderid: req.body.order_stat_id
     };
-    var result = await eosaction.pushtrx('leaseunstake', data, process.env.contract);
+    var result = await eosaction.pushtrx('leaseunstake', data, process.env.contract, process.env.contract);
     console.log('result', result);
-    var _order3 = await Orderstat.findOne({ id: req.body.order_stat_id });
-    if (_order3) {
-      await Order.findOne({ id: _order3.order_id }).remove().exec();
-      await _order3.remove();
-      res.status(400).send('Successfully unstaked');
+    var order = await Orderstat.findOne({ id: req.body.order_stat_id });
+    if (order) {
+      await Order.findOne({ order_id: order.order_id }).remove().exec();
+      await order.remove();
+      return res.status(200).send({ message: 'Successfully unstaked' });
     }
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.get_orderdet = async function (req, res) {
+  if (!req.params.authorizer) {
+    return res.status(400).send({ message: 'Missing required parameter' });
+  }
   try {
-    var _order4 = await Orderstat.find({});
-    if (_order4) {
-      res.status(200).send(_order4);
+    var order = await Order.find({ authorizer: req.params.authorizer });
+    if (order) {
+      return res.status(200).send({ message: order });
     } else {
-      res.status(200).send('no order details found');
+      return res.status(400).send({ message: 'no order created by this account name' });
     }
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
@@ -226,33 +301,61 @@ leaseController.get_orderstatdet = async function (req, res) {
   try {
     var orderstat = await Orderstat.find({});
     if (orderstat) {
-      res.status(200).send(order);
+      return res.status(200).send({ message: orderstat });
     } else {
-      res.status(200).send('no order details found');
+      return res.status(400).send({ message: 'no order status details found' });
     }
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
+  }
+};
+
+leaseController.get_orderstatdet_byaccount = async function (req, res) {
+  if (!req.params.account_name) {
+    return res.status(400).send({ message: 'Missing required parameter' });
+  }
+  try {
+    var orderstat = await Orderstat.find({ lender: req.params.account_name });
+    if (orderstat) {
+      var respobj = {};
+      var vaccount_blc = await eosaction.getvaccountdet(req.params.account_name);
+
+      if (vaccount_blc.row) {
+        respobj.liquid_blc = vaccount_blc.row.balance, respobj.total_leaseout_amount = vaccount_blc.row.total_leaseout_amount;
+        respobj.total_rewards_amount = vaccount_blc.row.total_reward_amount;
+      }
+      respobj.order_matched = orderstat;
+
+      return res.status(200).send({ message: respobj });
+    } else {
+      return res.status(400).send({ message: 'no order matched yet for this account_name' });
+    }
+  } catch (err) {
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
 leaseController.get_accountblc = async function (req, res) {
+  if (!req.params.vaccount) {
+    return res.status(400).send({ message: 'Missing required parameter' });
+  }
   try {
-    var balance = await api.rpc.get_currency_balance({
-      code: 'eosio.token',
-      account: process.env.exchange
-    });
-    var vaccount_blc = getaccountblc(req.params.vaccount);
+    var vaccount_blc = await eosaction.getvaccountdet(req.params.vaccount);
+    var vaccount_history = await eosaction.getvaccounthistory(req.params.vaccount);
     var respobj = {};
-    respobj.user_exchange_blc = balance;
-    if (vaccount_blc.res.row) {
-      respobj.userblc_leased_out = vaccount_blc.res.row.balance;
-      respobj.userblc_staked = vaccount_blc.res.row.total_leaseout_amount;
-    } else respobj.user_leased_out = '0.0000 EOS';
-    res.status(200).send(respobj);
+    if (vaccount_blc.row) {
+      respobj.userblc_leaseout = vaccount_blc.row.balance;
+      respobj.userblc_totalstaked = vaccount_blc.row.total_leaseout_amount;
+      respobj.userblc_totalreward = vaccount_blc.row.total_reward_amount;
+    } else if (vaccount_history.row) {
+      respobj.userblc_leaseout_history = vaccount_history.row.balance;
+    } else respobj.userblc_leaseout = '0.0000 EOS';
+    return res.status(200).send({ message: respobj });
   } catch (err) {
-    console.log('error-->', err);
-    res.status(400).send(err);
+    var errmsg = await errorhandler.smartcontracterr(err);
+    return res.status(400).send(errmsg);
   }
 };
 
