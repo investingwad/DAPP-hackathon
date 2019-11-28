@@ -19,15 +19,15 @@ let {
 const { createClient } = require('@liquidapps/dapp-client')
 var client
 let dspEndpt = 'https://kylin-dsp-2.liquidapps.io'
-// const getClient = async () => {
-//   if (client) return client
-//   client = await createClient({
-//     network: 'kylin',
-//     httpEndpoint: dspEndpt,
-//     fetch: fetch
-//   })
-//   return client
-// }
+const getClient = async () => {
+  if (client) return client
+  client = await createClient({
+    network: 'kylin',
+    httpEndpoint: dspEndpt,
+    fetch: fetch
+  })
+  return client
+}
 
 leaseController.create = (req, res) => {
   res.status(200).send('create user')
@@ -43,12 +43,12 @@ leaseController.register_user = async (req, res) => {
     return res.status(400).send({ message: 'Missing required body parameter' })
   }
   try {
-    let client = await createClient({
-      network: 'kylin',
-      httpEndpoint: dspEndpt,
-      fetch: fetch
-    })
-    const service = await client.service('vaccounts', process.env.contract)
+    // let client = await createClient({
+    //   network: 'kylin',
+    //   httpEndpoint: dspEndpt,
+    //   fetch: fetch
+    // })
+    const service = await (await getClient()).service('vaccounts', process.env.contract)
     let prv_key = await PrivateKey.randomKey()
     prv_key = prv_key.toWif()
     console.log(prv_key)
@@ -356,7 +356,7 @@ leaseController.get_orderdet = async (req, res) => {
     if (order) {
       return res.status(200).send({message : order})
     } else {
-      return res.status(400).send({ message: 'no order details found' })
+      return res.status(400).send({ message: 'no order created by this account name' })
     }
   } catch (err) {
     let errmsg = await errorhandler.smartcontracterr(err)
@@ -371,6 +371,35 @@ leaseController.get_orderstatdet = async (req, res) => {
       return res.status(200).send({message : orderstat})
     } else {
       return res.status(400).send({ message: 'no order status details found' })
+    }
+  } catch (err) {
+    let errmsg = await errorhandler.smartcontracterr(err)
+    return res.status(400).send(errmsg)
+  }
+}
+
+leaseController.get_orderstatdet_byaccount = async (req, res) => {
+  if (!req.params.account_name) {
+    return res.status(400).send({ message: 'Missing required parameter' })
+  }
+  try {
+    let orderstat = await Orderstat.find({lender : req.params.account_name})
+    if (orderstat) {
+    let respobj = {}
+      let vaccount_blc = await eosaction.getvaccountdet(req.params.account_name)
+  
+      if(vaccount_blc.row)
+      {
+        respobj.liquid_blc = vaccount_blc.row.balance,
+        respobj.total_leaseout_amount = vaccount_blc.row.total_leaseout_amount
+        respobj.total_rewards_amount = vaccount_blc.row.total_reward_amount
+      }
+      respobj.order_matched = orderstat
+     
+     
+      return res.status(200).send({message : respobj})
+    } else {
+      return res.status(400).send({ message: 'no order matched yet for this account_name' })
     }
   } catch (err) {
     let errmsg = await errorhandler.smartcontracterr(err)
