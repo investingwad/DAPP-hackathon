@@ -36,7 +36,7 @@
     "async": "^3.1.0",
     "async-retry": "^1.2.3",
     "aws-sdk": "^2.436.0",
-    "axios": "^0.18.0",
+    "axios": "^0.21.1",
     "bcryptjs": "^2.4.3",
     "big-integer": "^1.6.47",
     "binaryen": "^71.0.0",
