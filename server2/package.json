@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@liquidapps/dapp-client": "^2.0.3107",
-    "async": "^3.1.0",
+    "async": "^3.2.2",
     "async-retry": "^1.2.3",
     "aws-sdk": "^2.436.0",
     "axios": "^0.18.0",
