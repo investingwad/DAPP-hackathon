@@ -50,7 +50,7 @@
     "dotenv": "^2.0.0",
     "eos-auth": "^2.1.22",
     "eosjs": "^20.0.0",
-    "express": "^4.13.3",
+    "express": "^4.17.3",
     "express-useragent": "^1.0.12",
     "express-winston": "^3.2.1",
     "fs": "0.0.1-security",
